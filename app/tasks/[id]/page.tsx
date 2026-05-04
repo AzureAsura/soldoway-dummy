@@ -1,140 +1,238 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import Link from "next/link";
 import { usePrivy } from "@privy-io/react-auth";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import type { Task } from "@/types";
+import { useCampaign } from "@/hooks/use-campaigns";
+import { ClientOnly } from "@/app/components/client-only";
 
 export default function TaskDetailPage() {
-  const params = useParams();
-  const router = useRouter();
-  const id = params.id as string;
+  const { id } = useParams() as { id: string };
   const { user } = usePrivy();
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const { data: campaign, isLoading } = useCampaign(id);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
 
-  const { data: task, isLoading, refetch } = useQuery<Task>({
-    queryKey: ["tasks", id],
-    queryFn: async () => {
-      const res = await fetch(`/api/tasks/${id}`);
-      if (!res.ok) throw new Error("Failed to fetch task");
-      return res.json();
-    },
-    enabled: Boolean(id),
+  const [form, setForm] = useState({
+    prospect_name: "",
+    prospect_contact: "",
+    scheduled_at: "",
+    notes: "",
   });
 
-  async function handleWithdraw() {
-    if (!task || !user) return;
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!user) return toast.error("Not authenticated");
+    if (!form.prospect_name || !form.prospect_contact || !form.scheduled_at) {
+      return toast.error("Please fill all required fields");
+    }
+
+    setIsSubmitting(true);
+    const toastId = toast.loading("Submitting meeting…");
     try {
-      toast("Initiating withdrawal...");
-      const res = await fetch("/api/withdraw", {
+      const res = await fetch("/api/meetings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ task_id: task.id, businessId: user.id }),
+        body: JSON.stringify({
+          campaign_id: id,
+          salesId: user.id,
+          prospect_name: form.prospect_name,
+          prospect_contact: form.prospect_contact,
+          scheduled_at: form.scheduled_at,
+          notes: form.notes || undefined,
+        }),
       });
 
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Failed to withdraw");
-      }
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to submit meeting");
 
-      toast.success("Successfully withdrew remaining funds!");
-      refetch();
-      router.refresh();
-    } catch (err: any) {
-      toast.error(err.message || "Withdrawal failed");
+      toast.success("Meeting submitted!", {
+        id: toastId,
+        description: "Waiting for Business approval.",
+      });
+      setSubmitted(true);
+      queryClient.invalidateQueries({ queryKey: ["meetings", user.id] });
+      setTimeout(() => router.push("/dashboard/sales"), 2000);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Something went wrong";
+      toast.error("Submission failed", { id: toastId, description: msg });
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
-  if (isLoading) return <div className="p-8 text-center animate-pulse">Loading task...</div>;
-  if (!task) return <div className="p-8 text-center">Task not found.</div>;
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-brand border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+  if (!campaign) return <div className="p-8 text-center">Campaign not found.</div>;
 
-  const remaining = task.budget_total - task.budget_used;
+  const remaining = campaign.meeting_capacity - campaign.meetings_used;
+  const isFull = remaining <= 0;
 
   return (
-    <div className="max-w-4xl mx-auto p-8 animate-fade-in">
-      <div className="flex justify-between items-start mb-8">
-        <div>
-          <h1 className="text-3xl font-bold mb-2">{task.title}</h1>
-          <p className="text-muted-foreground">{task.description}</p>
-        </div>
-        <div className="text-right">
-          <span className={`px-3 py-1 rounded-full text-xs font-bold ${task.status === "ACTIVE" ? "bg-brand/10 text-brand" : "bg-muted border border-border"}`}>
-            {task.status}
-          </span>
-          <div className="mt-2 text-sm">Escrow: <span className="font-mono">{task.escrow_pda.slice(0, 8)}...</span></div>
+    <ClientOnly>
+      <div className="max-w-4xl mx-auto px-6 py-10 animate-fade-in">
+        <div className="grid md:grid-cols-5 gap-8">
+          {/* Campaign Info — left panel */}
+          <div className="md:col-span-2">
+            <div className="bg-card border border-border rounded-2xl p-6 shadow-sm sticky top-24">
+              <div className="mb-4">
+                <span className="text-xs bg-secondary px-2 py-0.5 rounded font-medium">
+                  {campaign.category}
+                </span>
+              </div>
+              <h1 className="text-xl font-bold mb-1">{campaign.title}</h1>
+              <p className="text-sm text-muted-foreground mb-4">{campaign.company}</p>
+
+              {campaign.description && (
+                <p className="text-sm text-muted-foreground leading-relaxed mb-6 border-t border-border pt-4">
+                  {campaign.description}
+                </p>
+              )}
+
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Reward</span>
+                  <span className="text-lg font-bold text-brand">
+                    {campaign.reward_per_meeting} SOL
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Slots Left</span>
+                  <span className={`text-sm font-bold ${isFull ? "text-destructive" : "text-success"}`}>
+                    {isFull ? "Full" : `${remaining} remaining`}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Budget Left</span>
+                  <span className="text-sm font-semibold">
+                    {(campaign.budget_total - campaign.budget_used).toFixed(2)} SOL
+                  </span>
+                </div>
+              </div>
+
+              {/* Capacity bar */}
+              <div className="mt-5">
+                <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                  <span>Capacity</span>
+                  <span>{campaign.meetings_used}/{campaign.meeting_capacity}</span>
+                </div>
+                <div className="h-2 bg-border rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-brand rounded-full"
+                    style={{
+                      width: `${Math.min((campaign.meetings_used / campaign.meeting_capacity) * 100, 100)}%`,
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Submit Meeting Form — right panel */}
+          <div className="md:col-span-3">
+            <h2 className="text-2xl font-bold mb-6">Submit Meeting</h2>
+
+            {submitted ? (
+              <div className="bg-success/5 border border-success/30 rounded-2xl p-8 text-center animate-fade-in">
+                <div className="text-5xl mb-4">🎉</div>
+                <h3 className="text-xl font-bold mb-2">Meeting Submitted!</h3>
+                <p className="text-muted-foreground">
+                  Your meeting is pending approval. Once approved, your reward will be paid automatically.
+                </p>
+                <p className="text-sm text-muted-foreground mt-3">Redirecting to dashboard…</p>
+              </div>
+            ) : isFull ? (
+              <div className="bg-card border border-border rounded-2xl p-8 text-center">
+                <div className="text-4xl mb-4">🔒</div>
+                <h3 className="text-xl font-bold mb-2">Campaign Full</h3>
+                <p className="text-muted-foreground">
+                  This campaign has reached its meeting capacity. Check other campaigns.
+                </p>
+              </div>
+            ) : (
+              <form
+                onSubmit={handleSubmit}
+                className="bg-card border border-border rounded-2xl p-6 shadow-sm space-y-5"
+              >
+                <div>
+                  <label className="block text-sm font-medium mb-1.5">
+                    Prospect Name <span className="text-destructive">*</span>
+                  </label>
+                  <input
+                    required
+                    type="text"
+                    className="w-full bg-secondary border border-border rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand"
+                    placeholder="e.g., John Doe – Acme Corp"
+                    value={form.prospect_name}
+                    onChange={(e) => setForm((p) => ({ ...p, prospect_name: e.target.value }))}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1.5">
+                    Prospect Contact <span className="text-destructive">*</span>
+                  </label>
+                  <input
+                    required
+                    type="text"
+                    className="w-full bg-secondary border border-border rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand"
+                    placeholder="Phone number or email address"
+                    value={form.prospect_contact}
+                    onChange={(e) => setForm((p) => ({ ...p, prospect_contact: e.target.value }))}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1.5">
+                    Date & Time of Meeting <span className="text-destructive">*</span>
+                  </label>
+                  <input
+                    required
+                    type="datetime-local"
+                    className="w-full bg-secondary border border-border rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand"
+                    value={form.scheduled_at}
+                    onChange={(e) => setForm((p) => ({ ...p, scheduled_at: e.target.value }))}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1.5">
+                    Meeting Notes
+                  </label>
+                  <textarea
+                    className="w-full bg-secondary border border-border rounded-xl px-4 py-3 min-h-[120px] focus:outline-none focus:ring-2 focus:ring-brand resize-none"
+                    placeholder="Briefly describe what happened during the meeting, the prospect's interest level, any follow-up agreed, etc."
+                    value={form.notes}
+                    onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))}
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  id="submit-meeting-btn"
+                  className="w-full bg-brand hover:bg-brand-dark text-white font-bold py-4 rounded-xl transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isSubmitting ? "Submitting…" : `Submit Meeting → Earn ${campaign.reward_per_meeting} SOL`}
+                </button>
+
+                <p className="text-xs text-muted-foreground text-center">
+                  After the Business approves your meeting, your reward will be paid to your wallet automatically.
+                </p>
+              </form>
+            )}
+          </div>
         </div>
       </div>
-
-      <div className="grid grid-cols-3 gap-6 mb-10">
-        <div className="bg-card border border-border p-5 rounded-xl text-center">
-          <div className="text-xs text-muted-foreground font-semibold uppercase mb-1">Total Budget</div>
-          <div className="text-2xl font-bold">{task.budget_total} SOL</div>
-        </div>
-        <div className="bg-card border border-border p-5 rounded-xl text-center">
-          <div className="text-xs text-muted-foreground font-semibold uppercase mb-1">Paid Out</div>
-          <div className="text-2xl font-bold text-success">{task.budget_used} SOL</div>
-        </div>
-        <div className="bg-card border border-border p-5 rounded-xl text-center">
-          <div className="text-xs text-muted-foreground font-semibold uppercase mb-1">Remaining</div>
-          <div className="text-2xl font-bold text-brand">{remaining.toFixed(2)} SOL</div>
-        </div>
-      </div>
-
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-bold">Meetings Logged</h2>
-        {task.status === "ACTIVE" && remaining > 0 && user?.id === task.business_id && (
-          <button 
-            onClick={handleWithdraw}
-            className="text-sm border border-destructive text-destructive hover:bg-destructive/10 px-4 py-2 rounded-lg transition-colors font-medium"
-          >
-            Withdraw Remaining Funds
-          </button>
-        )}
-      </div>
-
-      {task.meetings && task.meetings.length > 0 ? (
-        <div className="bg-card border border-border rounded-2xl overflow-hidden">
-          <table className="w-full text-sm text-left">
-            <thead className="bg-secondary text-muted-foreground text-xs uppercase">
-              <tr>
-                <th className="px-6 py-4 font-medium">Prospect</th>
-                <th className="px-6 py-4 font-medium">Sales Rep</th>
-                <th className="px-6 py-4 font-medium">Date</th>
-                <th className="px-6 py-4 font-medium">Status</th>
-                <th className="px-6 py-4 font-medium">Payout</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {task.meetings.map(m => (
-                <tr key={m.id} className="hover:bg-accent/50 transition-colors">
-                  <td className="px-6 py-4 font-medium">{m.prospect_name}</td>
-                  <td className="px-6 py-4 font-mono text-xs">{m.sales_id.slice(0, 8)}...</td>
-                  <td className="px-6 py-4">{new Date(m.scheduled_at).toLocaleDateString()}</td>
-                  <td className="px-6 py-4">
-                    {m.status === "DONE" ? (
-                      <span className={m.outcome === "PRODUCTIVE" ? "text-success font-semibold" : "text-muted-foreground"}>
-                        {m.outcome?.replace("_", " ")}
-                      </span>
-                    ) : (
-                      <span className="text-warning">Pending</span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4">
-                    {m.payout ? (
-                      <span className="text-brand font-medium">{m.payout.amount} SOL</span>
-                    ) : "-"}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        <div className="text-center p-8 border border-dashed border-border rounded-xl text-muted-foreground">
-          No meetings logged by sales reps yet.
-        </div>
-      )}
-    </div>
+    </ClientOnly>
   );
 }

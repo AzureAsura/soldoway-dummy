@@ -4,10 +4,10 @@ import { useQuery } from "@tanstack/react-query";
 import type { Campaign } from "@/types";
 
 /**
- * Fetch all ACTIVE campaigns — kept for backward compat.
- * Prefer useCampaigns() from hooks/use-campaigns.ts
+ * Fetch all ACTIVE campaigns (for Sales marketplace).
+ * Polls every 5s per spec.
  */
-export function useTasks() {
+export function useCampaigns() {
   return useQuery<Campaign[]>({
     queryKey: ["campaigns"],
     queryFn: async () => {
@@ -20,7 +20,11 @@ export function useTasks() {
   });
 }
 
-export function useTask(id: string) {
+/**
+ * Fetch a single campaign by ID.
+ * Polls every 5s for live status updates.
+ */
+export function useCampaign(id: string) {
   return useQuery<Campaign>({
     queryKey: ["campaigns", id],
     queryFn: async () => {

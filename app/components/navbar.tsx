@@ -11,31 +11,64 @@ export function Navbar() {
 
   return (
     <ClientOnly>
-      <nav className="border-b border-border bg-card">
+      <nav className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link href="/" className="font-bold text-xl tracking-tight flex items-center gap-2">
-            <span className="w-6 h-6 rounded bg-gradient-to-tr from-brand to-brand-light flex items-center justify-center text-white text-xs">S</span>
-            Soldoway
+          <Link
+            href="/"
+            className="font-bold text-xl tracking-tight flex items-center gap-2"
+          >
+            <span className="w-7 h-7 rounded-lg bg-gradient-to-tr from-brand to-brand-light flex items-center justify-center text-white text-xs font-black shadow-sm">
+              S
+            </span>
+            <span>Soldoway</span>
           </Link>
-          <div className="flex items-center gap-4">
+
+          <div className="flex items-center gap-3">
             {authenticated ? (
               <>
                 {role === "BUSINESS" && (
-                  <Link href="/tasks/new" className="text-sm font-medium hover:text-brand transition-colors">
-                    + Create Task
-                  </Link>
+                  <>
+                    <Link
+                      href="/dashboard/business"
+                      className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      Dashboard
+                    </Link>
+                    <Link
+                      href="/campaigns/new"
+                      className="text-sm font-medium bg-brand text-white px-4 py-2 rounded-lg hover:bg-brand-dark transition-colors"
+                    >
+                      + New Campaign
+                    </Link>
+                  </>
                 )}
                 {role === "SALES" && (
-                  <Link href="/tasks" className="text-sm font-medium hover:text-brand transition-colors">
-                    Browse Tasks
+                  <>
+                    <Link
+                      href="/dashboard/sales"
+                      className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      Dashboard
+                    </Link>
+                    <Link
+                      href="/tasks"
+                      className="text-sm font-medium bg-brand text-white px-4 py-2 rounded-lg hover:bg-brand-dark transition-colors"
+                    >
+                      Browse Tasks
+                    </Link>
+                  </>
+                )}
+                {!role && (
+                  <Link
+                    href="/dashboard"
+                    className="text-sm font-medium hover:text-brand transition-colors"
+                  >
+                    Dashboard
                   </Link>
                 )}
-                <Link href="/dashboard" className="text-sm font-medium hover:text-brand transition-colors">
-                  Dashboard
-                </Link>
                 <button
                   onClick={logout}
-                  className="text-sm px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors"
+                  className="text-sm px-4 py-2 border border-border bg-secondary text-secondary-foreground rounded-lg hover:bg-accent transition-colors"
                 >
                   Logout
                 </button>
@@ -43,7 +76,8 @@ export function Navbar() {
             ) : (
               <button
                 onClick={login}
-                className="text-sm px-5 py-2 bg-brand text-white font-medium rounded-lg hover:bg-brand-dark transition-colors shadow-sm"
+                id="nav-login"
+                className="text-sm px-5 py-2 bg-brand text-white font-semibold rounded-lg hover:bg-brand-dark transition-all shadow-sm hover:shadow-md"
               >
                 Log in / Sign up
               </button>

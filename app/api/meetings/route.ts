@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { badRequest } from "@/lib/api";
 import type { CreateMeetingInput } from "@/types";
 
 // GET /api/meetings — list meetings for the authenticated sales user
@@ -8,15 +7,29 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const salesId = searchParams.get("salesId");
-    const taskId = searchParams.get("taskId");
+    const campaignId = searchParams.get("campaignId");
+
+    if (!salesId && !campaignId) {
+      return NextResponse.json(
+        { error: "Provide salesId or campaignId query param" },
+        { status: 400 }
+      );
+    }
 
     const meetings = await prisma.meeting.findMany({
       where: {
         ...(salesId ? { sales_id: salesId } : {}),
-        ...(taskId ? { task_id: taskId } : {}),
+        ...(campaignId ? { campaign_id: campaignId } : {}),
       },
       include: {
-        task: { select: { id: true, title: true, reward_amount: true } },
+        campaign: {
+          select: {
+            id: true,
+            title: true,
+            company: true,
+            reward_per_meeting: true,
+          },
+        },
         sales: { select: { id: true, wallet_address: true, email: true } },
         payout: true,
       },
@@ -30,34 +43,54 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST /api/meetings — create a new meeting (Sales only)
+// POST /api/meetings — Sales submits a new meeting to a campaign
 export async function POST(req: NextRequest) {
   try {
     const body = (await req.json()) as CreateMeetingInput & { salesId: string };
 
-    const { task_id, prospect_name, scheduled_at, calendar_event_id, salesId } = body;
+    const {
+      campaign_id,
+      prospect_name,
+      prospect_contact,
+      scheduled_at,
+      notes,
+      salesId,
+    } = body;
 
-    if (!task_id || !prospect_name || !scheduled_at || !salesId) {
-      return badRequest("Missing required fields: task_id, prospect_name, scheduled_at, salesId");
+    if (!campaign_id || !prospect_name || !prospect_contact || !scheduled_at || !salesId) {
+      return NextResponse.json(
+        { error: "Missing required fields: campaign_id, prospect_name, prospect_contact, scheduled_at, salesId" },
+        { status: 400 }
+      );
     }
 
-    // Verify task is still active and has budget remaining
-    const task = await prisma.task.findUnique({ where: { id: task_id } });
+    // Verify campaign is still ACTIVE and has capacity
+    const campaign = await prisma.campaign.findUnique({
+      where: { id: campaign_id },
+    });
 
-    if (!task) return NextResponse.json({ error: "Task not found" }, { status: 404 });
-    if (task.status !== "ACTIVE") return badRequest("Task is no longer active");
-    if (task.budget_used + task.reward_amount > task.budget_total) {
-      return badRequest("Task budget is exhausted");
+    if (!campaign) {
+      return NextResponse.json({ error: "Campaign not found" }, { status: 404 });
+    }
+    if (campaign.status !== "ACTIVE") {
+      return NextResponse.json({ error: "Campaign is no longer active" }, { status: 400 });
+    }
+    if (campaign.meetings_used >= campaign.meeting_capacity) {
+      return NextResponse.json({ error: "Campaign has reached its meeting capacity" }, { status: 400 });
     }
 
     const meeting = await prisma.meeting.create({
       data: {
-        task_id,
+        campaign_id,
         sales_id: salesId,
         prospect_name,
+        prospect_contact,
         scheduled_at: new Date(scheduled_at),
-        calendar_event_id,
+        notes: notes ?? null,
         status: "PENDING",
+      },
+      include: {
+        campaign: { select: { id: true, title: true, company: true, reward_per_meeting: true } },
       },
     });
 

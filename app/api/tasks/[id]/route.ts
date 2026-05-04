@@ -4,12 +4,12 @@ import { notFound } from "@/lib/api";
 
 type Params = { params: Promise<{ id: string }> };
 
-// GET /api/tasks/[id] — get task detail with meetings and payout status
+// GET /api/tasks/[id] — backward compat, uses campaign table
 export async function GET(_req: NextRequest, { params }: Params) {
   try {
     const { id } = await params;
 
-    const task = await prisma.task.findUnique({
+    const campaign = await prisma.campaign.findUnique({
       where: { id },
       include: {
         business: { select: { id: true, wallet_address: true, email: true } },
@@ -24,9 +24,8 @@ export async function GET(_req: NextRequest, { params }: Params) {
       },
     });
 
-    if (!task) return notFound("Task");
-
-    return NextResponse.json(task);
+    if (!campaign) return notFound("Campaign");
+    return NextResponse.json(campaign);
   } catch (err) {
     console.error("[GET /api/tasks/[id]]", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

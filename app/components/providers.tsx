@@ -4,6 +4,7 @@ import { PrivyProvider } from "@privy-io/react-auth";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { Toaster } from "sonner";
+import { createSolanaRpc, createSolanaRpcSubscriptions } from "@solana/kit";
 import { PropsWithChildren, useState, useEffect } from "react";
 import { AuthGuard } from "./auth-guard";
 
@@ -21,23 +22,19 @@ export function Providers({ children }: PropsWithChildren) {
   );
 
   const privyAppId = process.env.NEXT_PUBLIC_PRIVY_APP_ID;
-  const rpcUrl = process.env.NEXT_PUBLIC_SOLANA_RPC_URL ?? "";
-
-  const [solanaConnectors, setSolanaConnectors] = useState<any>(null);
+  const [solanaConnectors, setSolanaConnectors] = useState<unknown>(null);
 
   useEffect(() => {
-    import("@privy-io/react-auth/solana").then((mod) => {
-      setSolanaConnectors(mod.toSolanaWalletConnectors());
-    }).catch(console.error);
+    import("@privy-io/react-auth/solana")
+      .then((mod) => setSolanaConnectors(mod.toSolanaWalletConnectors()))
+      .catch(console.error);
   }, []);
 
   if (!privyAppId) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background text-foreground p-6">
+      <div className="min-h-screen flex items-center justify-center bg-background p-6">
         <div className="max-w-md w-full bg-card p-8 rounded-2xl border border-destructive/30">
-          <h2 className="text-xl font-bold text-destructive mb-2">
-            Missing Configuration
-          </h2>
+          <h2 className="text-xl font-bold text-destructive mb-2">Missing Configuration</h2>
           <p className="text-sm text-muted-foreground">
             Add <code className="font-mono">NEXT_PUBLIC_PRIVY_APP_ID</code> to{" "}
             <code className="font-mono">.env</code> to initialize auth.
@@ -47,16 +44,21 @@ export function Providers({ children }: PropsWithChildren) {
     );
   }
 
-  // Prevent Privy from crashing because connectors haven't loaded yet
-  if (!solanaConnectors) {
-    return null;
-  }
+  if (!solanaConnectors) return null;
 
   return (
     <QueryClientProvider client={queryClient}>
       <PrivyProvider
         appId={privyAppId}
         config={{
+          solana: {
+            rpcs: {
+              "solana:devnet": {
+                rpc: createSolanaRpc("https://api.devnet.solana.com"),
+                rpcSubscriptions: createSolanaRpcSubscriptions("wss://api.devnet.solana.com"),
+              },
+            },
+          },
           loginMethods: ["email", "google", "wallet"],
           appearance: {
             theme: "dark",
@@ -65,7 +67,8 @@ export function Providers({ children }: PropsWithChildren) {
           },
           externalWallets: {
             solana: {
-              connectors: solanaConnectors,
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              connectors: solanaConnectors as any,
             },
           },
           embeddedWallets: {
@@ -76,7 +79,7 @@ export function Providers({ children }: PropsWithChildren) {
         }}
       >
         <AuthGuard>
-          <Toaster position="bottom-right" richColors theme="dark" />
+          <Toaster richColors position="top-right" />
           {children}
         </AuthGuard>
       </PrivyProvider>

@@ -2,9 +2,9 @@
 
 export type Role = "BUSINESS" | "SALES";
 
-export type TaskStatus = "ACTIVE" | "COMPLETED" | "WITHDRAWN";
+export type CampaignStatus = "ACTIVE" | "CLOSED" | "WITHDRAWN";
 
-export type MeetingStatus = "PENDING" | "CONFIRMED" | "DONE" | "REJECTED";
+export type MeetingStatus = "PENDING" | "APPROVED" | "REJECTED";
 
 export type Outcome = "PRODUCTIVE" | "NOT_PRODUCTIVE";
 
@@ -20,18 +20,24 @@ export type User = {
   created_at: string;
 };
 
-export type Task = {
+export type Campaign = {
   id: string;
   business_id: string;
   title: string;
+  company: string;
+  category: string;
   description: string | null;
-  reward_amount: number; // SOL per meeting
-  budget_total: number; // SOL
-  budget_used: number; // SOL
+  reward_per_meeting: number; // SOL per approved meeting
+  meeting_capacity: number;   // Max meetings
+  meetings_used: number;      // Approved meetings so far
+  budget_total: number;       // Total SOL deposited
+  budget_used: number;        // SOL paid out
   escrow_pda: string;
-  status: TaskStatus;
+  tx_signature: string | null;
+  status: CampaignStatus;
+  deposit_timestamp: string;
   created_at: string;
-  // Relations (populated when queried with include)
+  // Relations
   business?: User;
   meetings?: Meeting[];
   withdrawals?: Withdrawal[];
@@ -39,17 +45,17 @@ export type Task = {
 
 export type Meeting = {
   id: string;
-  task_id: string;
+  campaign_id: string;
   sales_id: string;
   prospect_name: string;
+  prospect_contact: string;
   scheduled_at: string;
-  calendar_event_id: string | null;
-  outcome: Outcome | null;
   notes: string | null;
+  outcome: Outcome | null;
   status: MeetingStatus;
   created_at: string;
   // Relations
-  task?: Task;
+  campaign?: Campaign;
   sales?: User;
   payout?: Payout | null;
 };
@@ -66,7 +72,7 @@ export type Payout = {
 
 export type Withdrawal = {
   id: string;
-  task_id: string;
+  campaign_id: string;
   business_id: string;
   amount: number; // SOL
   tx_signature: string;
@@ -75,29 +81,34 @@ export type Withdrawal = {
 
 // ─── API Request/Response Types ───────────────────────────────────────────────
 
-export type CreateTaskInput = {
+export type CreateCampaignInput = {
   title: string;
+  company: string;
+  category: string;
   description?: string;
-  reward_amount: number;
+  reward_per_meeting: number;
+  meeting_capacity: number;
   budget_total: number;
 };
 
 export type CreateMeetingInput = {
-  task_id: string;
+  campaign_id: string;
   prospect_name: string;
+  prospect_contact: string;
   scheduled_at: string; // ISO 8601
-  calendar_event_id?: string;
+  notes?: string;
 };
 
 export type UpdateMeetingInput = {
-  outcome: Outcome;
-  notes?: string;
+  status: "APPROVED" | "REJECTED";
 };
 
 export type PayoutRequest = {
   meeting_id: string;
+  business_id: string;
 };
 
 export type WithdrawRequest = {
-  task_id: string;
+  campaign_id: string;
+  business_id: string;
 };
