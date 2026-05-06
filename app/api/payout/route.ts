@@ -31,10 +31,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Meeting not found" }, { status: 404 });
     }
 
-    // Validation 1: meeting status must be APPROVED
-    if (meeting.status !== "APPROVED") {
+    // Validation 1: meeting must be PENDING (payout route sets it to APPROVED atomically)
+    if (meeting.status !== "PENDING") {
       return NextResponse.json(
-        { error: "Meeting must be APPROVED before payout" },
+        { error: "Meeting must be PENDING before payout (already approved or rejected)" },
         { status: 400 }
       );
     }
@@ -120,13 +120,18 @@ export async function POST(req: NextRequest) {
     );
 
     let signature = "";
-    const toastId = "payout-tx";
     try {
+      const { blockhash } = await connection.getLatestBlockhash("confirmed");
+      tx.recentBlockhash = blockhash;
+      tx.feePayer = serverKeypair.publicKey;
+      
+      console.log(`[approvePayout] Sending ${amount} SOL to ${salesPubkey.toBase58()}`);
       signature = await sendAndConfirmTransaction(connection, tx, [serverKeypair]);
+      console.log(`[approvePayout] Transaction successful: ${signature}`);
     } catch (txErr: unknown) {
       console.error("[approvePayout] on-chain tx failed:", txErr);
       return NextResponse.json(
-        { error: "On-chain payout transaction failed" },
+        { error: "On-chain payout transaction failed: " + (txErr instanceof Error ? txErr.message : "Unknown error") },
         { status: 500 }
       );
     }
@@ -136,7 +141,12 @@ export async function POST(req: NextRequest) {
     const newStatus =
       newMeetingsUsed >= campaign.meeting_capacity ? "CLOSED" : "ACTIVE";
 
-    const [payout] = await prisma.$transaction([
+    const txResults = await prisma.$transaction([
+      // Update meeting status to APPROVED
+      prisma.meeting.update({
+        where: { id: meeting_id },
+        data: { status: "APPROVED" },
+      }),
       // Create or update payout record
       ...(meeting.payout
         ? [
@@ -166,6 +176,9 @@ export async function POST(req: NextRequest) {
         },
       }),
     ]);
+
+    // txResults[0] = meeting update, txResults[1] = payout, txResults[2] = campaign update
+    const payout = txResults[1];
 
     return NextResponse.json(
       { payout, signature, tx_signature: signature },

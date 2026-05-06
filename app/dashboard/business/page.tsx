@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { usePrivy } from "@privy-io/react-auth";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useWalletBalance } from "@/hooks/use-wallet-balance";
 import { ClientOnly } from "@/app/components/client-only";
@@ -33,11 +34,21 @@ function ExplorerLink({ sig }: { sig: string }) {
 }
 
 export default function BusinessDashboardPage() {
-  const { user } = usePrivy();
+  const { user, authenticated, ready } = usePrivy();
+  const router = useRouter();
   const queryClient = useQueryClient();
   const { data: balance, isLoading: balanceLoading } = useWalletBalance();
   const [withdrawingId, setWithdrawingId] = useState<string | null>(null);
   const [approvingId, setApprovingId] = useState<string | null>(null);
+
+  // Auth guard
+  useEffect(() => {
+    if (!ready) return;
+    if (!authenticated) {
+      toast.error("Please login to continue");
+      router.replace("/");
+    }
+  }, [ready, authenticated, router]);
 
   // Fetch all campaigns for this business (polls every 5s)
   const { data: campaigns, isLoading: campaignsLoading } = useQuery<Campaign[]>({
@@ -111,23 +122,14 @@ export default function BusinessDashboardPage() {
   }
 
   // ── Approve meeting handler ─────────────────────────────────────────────────
+  // NOTE: Do NOT call PATCH /api/meetings/[id] first — /api/payout handles
+  // the meeting status update + payout atomically in a single DB transaction.
   async function handleApprove(meeting: Meeting) {
     if (!user) return;
     setApprovingId(meeting.id);
     const toastId = toast.loading("Approving meeting & sending payout…");
     try {
-      // 1. Approve meeting status
-      const patchRes = await fetch(`/api/meetings/${meeting.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "APPROVED" }),
-      });
-      if (!patchRes.ok) {
-        const e = await patchRes.json();
-        throw new Error(e.error || "Failed to approve meeting");
-      }
-
-      // 2. Trigger on-chain payout
+      // Trigger on-chain payout — this also sets meeting.status = APPROVED atomically
       const payoutRes = await fetch("/api/payout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -136,17 +138,17 @@ export default function BusinessDashboardPage() {
       const payoutData = await payoutRes.json();
       if (!payoutRes.ok) throw new Error(payoutData.error || "Payout failed");
 
-      const explorerUrl = `https://explorer.solana.com/tx/${payoutData.signature}?cluster=devnet`;
-      toast.success("Payout approved!", {
+      const explorerUrl = `https://explorer.solana.com/tx/${payoutData.tx_signature}?cluster=devnet`;
+      toast.success("Payout sent!", {
         id: toastId,
-        description: `Tx: ${payoutData.signature?.slice(0, 8)}…`,
-        action: { label: "View", onClick: () => window.open(explorerUrl) },
+        description: `${payoutData.tx_signature?.slice(0, 8)}… SOL sent to Sales wallet.`,
+        action: { label: "View on Explorer", onClick: () => window.open(explorerUrl) },
       });
       queryClient.invalidateQueries({ queryKey: ["business-campaigns", user.id] });
-      queryClient.invalidateQueries({ queryKey: ["business-meetings"] });
+      queryClient.invalidateQueries({ queryKey: ["business-meetings", campaignIds.join(",")] });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Approval failed";
-      toast.error("Approval failed", { id: toastId, description: msg });
+      toast.error("Payout failed", { id: toastId, description: msg });
     } finally {
       setApprovingId(null);
     }

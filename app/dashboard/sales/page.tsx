@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { usePrivy } from "@privy-io/react-auth";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useMeetings } from "@/hooks/use-meetings";
 import { useWalletBalance } from "@/hooks/use-wallet-balance";
@@ -11,13 +12,23 @@ import { ClientOnly } from "@/app/components/client-only";
 import type { Meeting } from "@/types";
 
 export default function SalesDashboardPage() {
-  const { user } = usePrivy();
+  const { user, authenticated, ready } = usePrivy();
+  const router = useRouter();
   const queryClient = useQueryClient();
   const { data: balance, isLoading: balanceLoading } = useWalletBalance();
   const { data: meetings, isLoading: meetingsLoading } = useMeetings(user?.id);
   const [isClaiming, setIsClaiming] = useState(false);
   const [editingMeeting, setEditingMeeting] = useState<Meeting | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // Auth guard
+  useEffect(() => {
+    if (!ready) return;
+    if (!authenticated) {
+      toast.error("Please login to continue");
+      router.replace("/");
+    }
+  }, [ready, authenticated, router]);
 
   const myMeetings = meetings ?? [];
 

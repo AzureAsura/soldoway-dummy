@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
 import { useWallets, useSignAndSendTransaction } from "@privy-io/react-auth/solana";
@@ -16,11 +16,20 @@ const CATEGORIES = [
 
 export default function NewCampaignPage() {
   const router = useRouter();
-  const { user } = usePrivy();
+  const { user, authenticated, ready } = usePrivy();
   const { wallets } = useWallets();
   const { signAndSendTransaction } = useSignAndSendTransaction();
   const queryClient = useQueryClient();
   const { data: balance } = useWalletBalance();
+
+  // Auth guard
+  useEffect(() => {
+    if (!ready) return;
+    if (!authenticated) {
+      toast.error("Please login to continue");
+      router.replace("/");
+    }
+  }, [ready, authenticated, router]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [form, setForm] = useState({

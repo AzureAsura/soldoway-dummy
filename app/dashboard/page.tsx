@@ -4,6 +4,7 @@ import { usePrivy } from "@privy-io/react-auth";
 import { useAppStore } from "@/stores/app-store";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { toast } from "sonner";
 
 import { ClientOnly } from "@/app/components/client-only";
 
@@ -16,6 +17,7 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!ready) return;
     if (!authenticated) {
+      toast.error("Please login to continue");
       router.replace("/");
       return;
     }

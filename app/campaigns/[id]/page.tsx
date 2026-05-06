@@ -30,16 +30,6 @@ export default function CampaignDetailPage() {
     setApprovingId(meeting.id);
     const toastId = toast.loading("Approving & sending payout…");
     try {
-      const patchRes = await fetch(`/api/meetings/${meeting.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "APPROVED" }),
-      });
-      if (!patchRes.ok) {
-        const e = await patchRes.json();
-        throw new Error(e.error || "Approval failed");
-      }
-
       const payoutRes = await fetch("/api/payout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

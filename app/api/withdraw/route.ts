@@ -103,11 +103,17 @@ export async function POST(req: NextRequest) {
 
     let signature = "";
     try {
+      const { blockhash } = await connection.getLatestBlockhash("confirmed");
+      tx.recentBlockhash = blockhash;
+      tx.feePayer = serverKeypair.publicKey;
+
+      console.log(`[withdrawEscrow] Sending ${totalClaimable} SOL back to ${businessPubkey.toBase58()}`);
       signature = await sendAndConfirmTransaction(connection, tx, [serverKeypair]);
+      console.log(`[withdrawEscrow] Transaction successful: ${signature}`);
     } catch (txErr: unknown) {
       console.error("[withdrawEscrow] on-chain tx failed:", txErr);
       return NextResponse.json(
-        { error: "On-chain withdrawal failed" },
+        { error: "On-chain withdrawal failed: " + (txErr instanceof Error ? txErr.message : "Unknown error") },
         { status: 500 }
       );
     }

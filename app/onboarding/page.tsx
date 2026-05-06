@@ -35,6 +35,7 @@ export default function OnboardingPage() {
   useEffect(() => {
     if (!ready) return;
     if (!authenticated) {
+      toast.error("Please login to continue");
       router.replace("/");
     } else if (isOnboarded) {
       router.replace("/dashboard");

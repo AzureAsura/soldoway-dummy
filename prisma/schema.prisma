@@ -68,6 +68,7 @@ model Meeting {
   prospect_name    String
   prospect_contact String                            // Phone or email
   scheduled_at     DateTime
+  calendar_event_id String?
   notes            String?
   outcome          Outcome?
   status           MeetingStatus @default(PENDING)

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
 import { useQueryClient } from "@tanstack/react-query";
@@ -10,12 +10,21 @@ import { ClientOnly } from "@/app/components/client-only";
 
 export default function TaskDetailPage() {
   const { id } = useParams() as { id: string };
-  const { user } = usePrivy();
+  const { user, authenticated, ready } = usePrivy();
   const router = useRouter();
   const queryClient = useQueryClient();
   const { data: campaign, isLoading } = useCampaign(id);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+
+  // Auth guard
+  useEffect(() => {
+    if (!ready) return;
+    if (!authenticated) {
+      toast.error("Please login to continue");
+      router.replace("/");
+    }
+  }, [ready, authenticated, router]);
 
   const [form, setForm] = useState({
     prospect_name: "",
