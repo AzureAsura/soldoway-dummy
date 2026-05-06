@@ -15,11 +15,18 @@ model User {
   wallet_address String       @unique
   email          String?
   role           Role
+  // Referral fields
+  referral_code  String?      @unique          // = wallet_address; used as /ref/[referral_code] slug
+  referred_by    String?                        // FK → users.id of the referrer
+  referrer       User?        @relation("Referrals", fields: [referred_by], references: [id])
+  referrals      User[]       @relation("Referrals")
   created_at     DateTime     @default(now())
   campaigns      Campaign[]   @relation("BusinessCampaigns")
   meetings       Meeting[]
   payouts        Payout[]
   withdrawals    Withdrawal[]
+  referral_rewards_given    ReferralReward[] @relation("ReferrerRewards")
+  referral_rewards_received ReferralReward[] @relation("ReferredRewards")
 }
 
 enum Role {
@@ -74,6 +81,7 @@ model Meeting {
   status           MeetingStatus @default(PENDING)
   created_at       DateTime      @default(now())
   payout           Payout?
+  referral_reward  ReferralReward?
 }
 
 enum MeetingStatus {
@@ -116,6 +124,21 @@ model Withdrawal {
   business_id  String
   business     User     @relation(fields: [business_id], references: [id])
   amount       Float
+  tx_signature String
+  created_at   DateTime @default(now())
+}
+
+// ─── Referral Rewards ─────────────────────────────────────────────────────────
+
+model ReferralReward {
+  id           String   @id @default(cuid())
+  referrer_id  String
+  referrer     User     @relation("ReferrerRewards", fields: [referrer_id], references: [id])
+  referred_id  String
+  referred     User     @relation("ReferredRewards", fields: [referred_id], references: [id])
+  meeting_id   String   @unique
+  meeting      Meeting  @relation(fields: [meeting_id], references: [id])
+  amount       Float                           // SOL sent to referrer (1% of payout)
   tx_signature String
   created_at   DateTime @default(now())
 }

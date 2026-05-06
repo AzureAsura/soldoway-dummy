@@ -59,8 +59,11 @@ export default function CampaignDetailPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "REJECTED" }),
       });
-      if (!res.ok) throw new Error((await res.json()).error || "Reject failed");
-      toast.success("Meeting rejected.");
+      const dataRes = await res.json();
+      if (!res.ok) throw new Error(dataRes.error || "Reject failed");
+      toast.success("Meeting rejected.", {
+        description: dataRes.cal_cancelled ? "Cal.com booking cancelled." : undefined,
+      });
       queryClient.invalidateQueries({ queryKey: ["campaigns", id] });
     } catch (err: unknown) {
       toast.error((err as Error).message);
@@ -206,6 +209,7 @@ export default function CampaignDetailPage() {
                     <th className="px-5 py-3 text-left font-medium">Notes</th>
                     <th className="px-5 py-3 text-left font-medium">Status</th>
                     <th className="px-5 py-3 text-left font-medium">Tx</th>
+                    <th className="px-5 py-3 text-left font-medium">Cal.com</th>
                     {isOwner && <th className="px-5 py-3 text-left font-medium">Actions</th>}
                   </tr>
                 </thead>
@@ -239,6 +243,20 @@ export default function CampaignDetailPage() {
                             {m.payout.tx_signature.slice(0, 8)}…
                           </a>
                         ) : "—"}
+                      </td>
+                      <td className="px-5 py-3">
+                        {m.calendar_event_id ? (
+                          <a
+                            href={`https://app.cal.com/booking/${m.calendar_event_id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg bg-brand/10 hover:bg-brand/20 text-brand border border-brand/30 font-medium transition-colors whitespace-nowrap"
+                          >
+                            📅 View Cal.com Booking
+                          </a>
+                        ) : (
+                          <span className="text-xs text-muted-foreground italic">Cal.com booking not created</span>
+                        )}
                       </td>
                       {isOwner && (
                         <td className="px-5 py-3">

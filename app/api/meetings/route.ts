@@ -79,6 +79,113 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Campaign has reached its meeting capacity" }, { status: 400 });
     }
 
+    // ── Cal.com availability check (BEFORE saving to DB) ────────────────────
+    // Only block when CAL_API_KEY is configured. If not set or Cal.com is down,
+    // we fall through and save the meeting anyway (non-blocking).
+    if (process.env.CAL_API_KEY) {
+      try {
+        const eventTypeId = process.env.CAL_EVENT_TYPE_ID
+          ? parseInt(process.env.CAL_EVENT_TYPE_ID)
+          : 5571740;
+
+        const calResponse = await fetch("https://api.cal.com/v2/bookings", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${process.env.CAL_API_KEY}`,
+            "cal-api-version": "2024-08-13",
+          },
+          body: JSON.stringify({
+            eventTypeId,
+            // scheduled_at is already ISO 8601 UTC from the frontend — do NOT re-convert
+            // (double conversion would shift the time by the server's UTC offset)
+            start: scheduled_at,
+            attendee: {
+              name: prospect_name,
+              email: prospect_contact.includes("@")
+                ? prospect_contact
+                : `${prospect_contact}@soldoway.app`,
+              timeZone: "Asia/Jakarta",
+            },
+          }),
+        });
+
+        const calData = await calResponse.json();
+        console.log("[Cal.com] booking response:", JSON.stringify(calData).slice(0, 300));
+
+        // If Cal.com explicitly rejects due to availability → block the submission
+        if (!calResponse.ok || calData.status === "error") {
+          const errMsg: string = calData.error?.message ?? calData.message ?? JSON.stringify(calData);
+          const isAvailabilityError =
+            errMsg.toLowerCase().includes("already has booking") ||
+            errMsg.toLowerCase().includes("not available");
+
+          if (isAvailabilityError) {
+            console.warn("[Cal.com] availability conflict — blocking meeting save:", errMsg);
+            return NextResponse.json(
+              {
+                error: "CAL_SLOT_UNAVAILABLE",
+                message: "This time slot is not available on Cal.com. Please choose a different time.",
+              },
+              { status: 409 }
+            );
+          }
+
+          // Other Cal.com errors (non-availability) → save meeting anyway
+          console.warn("[Cal.com] non-availability error (non-blocking):", errMsg);
+          const meeting = await prisma.meeting.create({
+            data: {
+              campaign_id,
+              sales_id: salesId,
+              prospect_name,
+              prospect_contact,
+              scheduled_at: new Date(scheduled_at),
+              notes: notes ?? null,
+              status: "PENDING",
+            },
+            include: {
+              campaign: { select: { id: true, title: true, company: true, reward_per_meeting: true } },
+            },
+          });
+          const finalMeeting = { ...meeting, calendar_event_id: null, cal_error: errMsg };
+          return NextResponse.json(finalMeeting, { status: 201 });
+        }
+
+        // Cal.com success → save meeting and store the uid
+        const uid: string | null = calData?.data?.uid ?? calData?.uid ?? null;
+        const meeting = await prisma.meeting.create({
+          data: {
+            campaign_id,
+            sales_id: salesId,
+            prospect_name,
+            prospect_contact,
+            scheduled_at: new Date(scheduled_at),
+            notes: notes ?? null,
+            status: "PENDING",
+            ...(uid ? { calendar_event_id: uid } : {}),
+          },
+          include: {
+            campaign: { select: { id: true, title: true, company: true, reward_per_meeting: true } },
+          },
+        });
+
+        if (uid) {
+          console.log("[Cal.com] booking created, uid:", uid);
+        } else {
+          console.warn("[Cal.com] booking succeeded but no uid in response");
+        }
+
+        return NextResponse.json({ ...meeting, calendar_event_id: uid, cal_error: null }, { status: 201 });
+
+      } catch (calErr) {
+        // Cal.com network/timeout errors → non-blocking, save meeting anyway
+        console.error("[Cal.com] integration error (non-blocking):", calErr);
+      }
+    } else {
+      console.log("[Cal.com] CAL_API_KEY not set, skipping booking.");
+    }
+
+    // Fallback path: CAL_API_KEY not set or Cal.com threw an unexpected error
     const meeting = await prisma.meeting.create({
       data: {
         campaign_id,
@@ -94,61 +201,8 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    let calendar_event_id = null;
-    let cal_error = null;
-    if (process.env.CAL_API_KEY) {
-      try {
-        const eventTypeId = process.env.CAL_EVENT_TYPE_ID
-          ? parseInt(process.env.CAL_EVENT_TYPE_ID)
-          : 5571740; // fallback to 30min event type
-        const calResponse = await fetch('https://api.cal.com/v2/bookings', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${process.env.CAL_API_KEY}`,
-            'cal-api-version': '2024-08-13'
-          },
-          body: JSON.stringify({
-            eventTypeId,
-            start: scheduled_at,
-            attendee: {
-              name: prospect_name,
-              email: prospect_contact.includes('@') ? prospect_contact : `${prospect_contact}@soldoway.app`,
-              timeZone: 'Asia/Jakarta'
-            }
-          })
-        });
-        const calData = await calResponse.json();
-        console.log('[Cal.com] booking response:', JSON.stringify(calData).slice(0, 300));
-        
-        // Cal.com v2 returns { status: "success", data: { uid: "..." } }
-        const uid = calData?.data?.uid ?? calData?.uid ?? null;
-        if (uid) {
-          calendar_event_id = uid;
-          await prisma.meeting.update({
-            where: { id: meeting.id },
-            data: { calendar_event_id }
-          });
-          console.log('[Cal.com] booking created, uid:', uid);
-        } else {
-          console.warn('[Cal.com] booking created but no uid in response:', JSON.stringify(calData).slice(0, 200));
-          if (calData.status === 'error') {
-            cal_error = calData.error?.message || "Booking failed";
-          }
-        }
-      } catch (err) {
-        // Non-blocking: Cal.com errors must not prevent meeting submission
-        console.error("[Cal.com] integration error (non-blocking):", err);
-        cal_error = err instanceof Error ? err.message : "Unknown error";
-      }
-    } else {
-      console.log('[Cal.com] CAL_API_KEY not set, skipping booking.');
-    }
+    return NextResponse.json({ ...meeting, calendar_event_id: null, cal_error: null }, { status: 201 });
 
-    // Attach calendar_event_id to response
-    const finalMeeting = { ...meeting, calendar_event_id, cal_error };
-
-    return NextResponse.json(finalMeeting, { status: 201 });
   } catch (err) {
     console.error("[POST /api/meetings]", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

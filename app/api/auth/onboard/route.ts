@@ -9,9 +9,10 @@ export async function POST(req: NextRequest) {
       role?: Role;
       privyUserId?: string;
       walletAddress?: string;
+      referralCode?: string;
     };
 
-    const { role, privyUserId, walletAddress } = body;
+    const { role, privyUserId, walletAddress, referralCode } = body;
 
     if (!role || !privyUserId || !walletAddress) {
       return NextResponse.json(
@@ -27,15 +28,28 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    let referredById: string | undefined = undefined;
+    if (referralCode && role === "SALES") {
+      const referrer = await prisma.user.findFirst({
+        where: { wallet_address: referralCode }
+      });
+      if (referrer) {
+        referredById = referrer.id;
+      }
+    }
+
     const user = await prisma.user.upsert({
       where: { id: privyUserId },
       create: {
         id: privyUserId,
         wallet_address: walletAddress,
         role,
+        referral_code: walletAddress,
+        ...(referredById ? { referred_by: referredById } : {})
       },
       update: {
         wallet_address: walletAddress,
+        referral_code: walletAddress,
       },
     });
 

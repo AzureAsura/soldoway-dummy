@@ -71,9 +71,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 2. Get Sales user's wallet address
+    // 2. Get Sales user's wallet address and referrer if any
     const salesUser = await prisma.user.findUnique({
       where: { id: meeting.sales_id },
+      include: { referrer: true }
     });
     if (!salesUser) {
       return NextResponse.json({ error: "Sales user not found" }, { status: 404 });
@@ -110,12 +111,44 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const lamports = Math.floor(amount * 1e9);
-    const tx = new Transaction().add(
+    const amount = campaign.reward_per_meeting;
+    let salesAmount = amount;
+    let referrerBonus = 0;
+    
+    const tx = new Transaction();
+
+    // Calculate referral split
+    if (salesUser.referrer) {
+      const platformFee = amount * 0.02;
+      referrerBonus = platformFee * 0.5;
+      salesAmount = amount - platformFee;
+      
+      const platformWallet = process.env.PLATFORM_WALLET_ADDRESS;
+      if (platformWallet) {
+        tx.add(
+          SystemProgram.transfer({
+            fromPubkey: serverKeypair.publicKey,
+            toPubkey: new PublicKey(platformWallet),
+            lamports: Math.floor(referrerBonus * 1e9),
+          })
+        );
+      }
+      
+      tx.add(
+        SystemProgram.transfer({
+          fromPubkey: serverKeypair.publicKey,
+          toPubkey: new PublicKey(salesUser.referrer.wallet_address),
+          lamports: Math.floor(referrerBonus * 1e9),
+        })
+      );
+    }
+
+    // Add transfer to sales rep
+    tx.add(
       SystemProgram.transfer({
         fromPubkey: serverKeypair.publicKey,
         toPubkey: salesPubkey,
-        lamports,
+        lamports: Math.floor(salesAmount * 1e9),
       })
     );
 
@@ -125,7 +158,7 @@ export async function POST(req: NextRequest) {
       tx.recentBlockhash = blockhash;
       tx.feePayer = serverKeypair.publicKey;
       
-      console.log(`[approvePayout] Sending ${amount} SOL to ${salesPubkey.toBase58()}`);
+      console.log(`[approvePayout] Sending ${salesAmount} SOL to ${salesPubkey.toBase58()}`);
       signature = await sendAndConfirmTransaction(connection, tx, [serverKeypair]);
       console.log(`[approvePayout] Transaction successful: ${signature}`);
     } catch (txErr: unknown) {
@@ -141,43 +174,69 @@ export async function POST(req: NextRequest) {
     const newStatus =
       newMeetingsUsed >= campaign.meeting_capacity ? "CLOSED" : "ACTIVE";
 
-    const txResults = await prisma.$transaction([
-      // Update meeting status to APPROVED
+    // Build transaction operations
+    const operations = [];
+
+    // 4.1 Update meeting status to APPROVED
+    operations.push(
       prisma.meeting.update({
         where: { id: meeting_id },
         data: { status: "APPROVED" },
-      }),
-      // Create or update payout record
-      ...(meeting.payout
-        ? [
-            prisma.payout.update({
-              where: { id: meeting.payout.id },
-              data: { tx_signature: signature, status: "SUCCESS" },
-            }),
-          ]
-        : [
-            prisma.payout.create({
-              data: {
-                meeting_id,
-                sales_id: meeting.sales_id,
-                amount,
-                tx_signature: signature,
-                status: "SUCCESS",
-              },
-            }),
-          ]),
-      // Update campaign budget_used, meetings_used, and status
+      })
+    );
+
+    // 4.2 Create or update payout record
+    if (meeting.payout) {
+      operations.push(
+        prisma.payout.update({
+          where: { id: meeting.payout.id },
+          data: { tx_signature: signature, status: "SUCCESS" },
+        })
+      );
+    } else {
+      operations.push(
+        prisma.payout.create({
+          data: {
+            meeting_id,
+            sales_id: meeting.sales_id,
+            amount: salesAmount, // Record actual amount received by sales
+            tx_signature: signature,
+            status: "SUCCESS",
+          },
+        })
+      );
+    }
+
+    // 4.3 Create referral reward record if applicable
+    if (salesUser.referrer && referrerBonus > 0) {
+      operations.push(
+        prisma.referralReward.create({
+          data: {
+            referrer_id: salesUser.referrer.id,
+            referred_id: salesUser.id,
+            meeting_id,
+            amount: referrerBonus,
+            tx_signature: signature,
+          }
+        })
+      );
+    }
+
+    // 4.4 Update campaign budget_used, meetings_used, and status
+    operations.push(
       prisma.campaign.update({
         where: { id: campaign.id },
         data: {
-          budget_used: { increment: amount },
+          budget_used: { increment: amount }, // Budget used is the full reward
           meetings_used: { increment: 1 },
           status: newStatus,
         },
-      }),
-    ]);
+      })
+    );
 
-    // txResults[0] = meeting update, txResults[1] = payout, txResults[2] = campaign update
+    const txResults = await prisma.$transaction(operations as any);
+
+    // txResults[1] is always the payout operation based on how we built the array
     const payout = txResults[1];
 
     return NextResponse.json(

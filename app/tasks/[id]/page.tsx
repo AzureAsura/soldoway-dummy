@@ -43,6 +43,11 @@ export default function TaskDetailPage() {
     setIsSubmitting(true);
     const toastId = toast.loading("Submitting meeting…");
     try {
+      // Convert the local datetime-local value (no TZ) to a proper UTC ISO string
+      // using the browser's own locale so the user's timezone (e.g. WIB +08:00) is
+      // applied exactly once — the API must NOT re-convert it.
+      const scheduledAtUTC = new Date(form.scheduled_at).toISOString();
+
       const res = await fetch("/api/meetings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -51,13 +56,15 @@ export default function TaskDetailPage() {
           salesId: user.id,
           prospect_name: form.prospect_name,
           prospect_contact: form.prospect_contact,
-          scheduled_at: form.scheduled_at,
+          scheduled_at: scheduledAtUTC, // already ISO 8601 UTC — no further conversion needed
           notes: form.notes || undefined,
         }),
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to submit meeting");
+      if (!res.ok) {
+        throw new Error(data.message || data.error || "Failed to submit meeting");
+      }
 
       if (data.cal_error) {
         // Meeting IS saved to DB — dismiss the loading toast with success
@@ -80,7 +87,11 @@ export default function TaskDetailPage() {
       setTimeout(() => router.push("/dashboard/sales"), 2000);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Something went wrong";
-      toast.error("Submission failed", { id: toastId, description: msg });
+      if (msg === "This time slot is not available on Cal.com. Please choose a different time.") {
+        toast.error(msg, { id: toastId });
+      } else {
+        toast.error("Submission failed", { id: toastId, description: msg });
+      }
     } finally {
       setIsSubmitting(false);
     }

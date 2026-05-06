@@ -80,6 +80,20 @@ export type Withdrawal = {
   created_at: string;
 };
 
+export type ReferralReward = {
+  id: string;
+  referrer_id: string;
+  referred_id: string;
+  meeting_id: string;
+  amount: number;
+  tx_signature: string;
+  created_at: string;
+  // Relations
+  referrer?: User;
+  referred?: User;
+  meeting?: Meeting;
+};
+
 // ─── API Request/Response Types ───────────────────────────────────────────────
 
 export type CreateCampaignInput = {

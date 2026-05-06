@@ -47,13 +47,16 @@ export default function OnboardingPage() {
     setIsLoading(true);
 
     try {
+      const referralCode = localStorage.getItem("referral_code");
+
       const res = await fetch("/api/auth/onboard", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           role: selectedRole,
           privyUserId: privyUser.id,
-          walletAddress: privyUser.wallet?.address || "no_wallet_yet"
+          walletAddress: privyUser.wallet?.address || "no_wallet_yet",
+          referralCode: referralCode || undefined
         }),
       });
 
@@ -68,6 +71,7 @@ export default function OnboardingPage() {
       setOnboarded(true);
 
       toast.success(`Welcome to Soldoway as ${selectedRole}!`);
+      localStorage.removeItem("referral_code"); // Clean up
       router.push("/dashboard");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Something went wrong");

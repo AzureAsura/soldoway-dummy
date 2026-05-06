@@ -167,7 +167,10 @@ export default function BusinessDashboardPage() {
         const e = await res.json();
         throw new Error(e.error || "Failed to reject");
       }
-      toast.success("Meeting rejected.");
+      const data = await res.json();
+      toast.success("Meeting rejected.", {
+        description: data.cal_cancelled ? "Cal.com booking cancelled." : undefined,
+      });
       queryClient.invalidateQueries({ queryKey: ["business-meetings"] });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Rejection failed";

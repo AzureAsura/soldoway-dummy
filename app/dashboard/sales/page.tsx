@@ -17,8 +17,20 @@ export default function SalesDashboardPage() {
   const queryClient = useQueryClient();
   const { data: balance, isLoading: balanceLoading } = useWalletBalance();
   const { data: meetings, isLoading: meetingsLoading } = useMeetings(user?.id);
+  
+  // Referral query
+  const { data: referralData } = useQuery({
+    queryKey: ["referrals", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const res = await fetch(`/api/referrals?referrerId=${user.id}`);
+      if (!res.ok) throw new Error("Failed to fetch referrals");
+      return res.json();
+    },
+    enabled: Boolean(user?.id),
+  });
+
   const [isClaiming, setIsClaiming] = useState(false);
-  const [editingMeeting, setEditingMeeting] = useState<Meeting | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // Auth guard
@@ -74,17 +86,17 @@ export default function SalesDashboardPage() {
     }
   }
 
-  // ── Delete PENDING meeting ───────────────────────────────────────────────────
+  // ── Delete PENDING meeting + cancel Cal.com booking ─────────────────────────
   async function handleDelete(id: string) {
-    if (!confirm("Delete this meeting?")) return;
+    if (!confirm("Delete this meeting? The Cal.com booking will also be cancelled.")) return;
     setDeletingId(id);
     try {
       const res = await fetch(`/api/meetings/${id}`, { method: "DELETE" });
-      if (!res.ok) {
-        const e = await res.json();
-        throw new Error(e.error || "Delete failed");
-      }
-      toast.success("Meeting deleted.");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Delete failed");
+      toast.success("Meeting deleted.", {
+        description: data.cal_cancelled ? "Cal.com booking cancelled." : undefined,
+      });
       queryClient.invalidateQueries({ queryKey: ["meetings", user?.id] });
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Delete failed");
@@ -170,6 +182,64 @@ export default function SalesDashboardPage() {
             </div>
           </div>
         </div>
+
+        {/* Referral Program */}
+        {referralData && (
+          <section className="mb-10 bg-brand/5 border border-brand/20 rounded-2xl p-6 shadow-sm">
+            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+              <span>🎁</span> Referral Program
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <p className="text-sm text-muted-foreground mb-2">Your Referral Link</p>
+                <div className="flex items-center gap-2">
+                  <code className="bg-background border border-border px-3 py-2 rounded-lg flex-1 text-sm overflow-x-auto">
+                    {typeof window !== "undefined" ? `${window.location.origin}/ref/${referralData.referral_code}` : `soldoway.app/ref/${referralData.referral_code}`}
+                  </code>
+                  <button
+                    onClick={() => {
+                      const link = typeof window !== "undefined" ? `${window.location.origin}/ref/${referralData.referral_code}` : `soldoway.app/ref/${referralData.referral_code}`;
+                      navigator.clipboard.writeText(link);
+                      toast.success("Referral link copied!");
+                    }}
+                    className="bg-secondary hover:bg-accent border border-border px-4 py-2 rounded-lg text-sm font-semibold transition-colors shrink-0"
+                  >
+                    Copy
+                  </button>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Share this link. You will earn 1% of the reward for every productive meeting your referrals submit!
+                </p>
+              </div>
+
+              <div className="flex flex-col justify-center">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-background border border-border rounded-xl p-4">
+                    <div className="text-xs text-muted-foreground mb-1 uppercase tracking-wider">Referral Earnings</div>
+                    <div className="text-xl font-bold text-brand">{(referralData.total_reward || 0).toFixed(4)} SOL</div>
+                  </div>
+                  <div className="bg-background border border-border rounded-xl p-4">
+                    <div className="text-xs text-muted-foreground mb-1 uppercase tracking-wider">Referred Users</div>
+                    <div className="text-xl font-bold">{referralData.referred_users?.length || 0}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {referralData.referred_users && referralData.referred_users.length > 0 && (
+              <div className="mt-6 border-t border-brand/10 pt-4">
+                <h3 className="text-sm font-semibold mb-3">Referred Users</h3>
+                <div className="flex flex-wrap gap-2">
+                  {referralData.referred_users.map((ru: any) => (
+                    <span key={ru.id} className="text-xs bg-background border border-border px-2 py-1 rounded-md font-mono">
+                      {ru.wallet_address.slice(0,4)}...{ru.wallet_address.slice(-4)}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </section>
+        )}
 
         {/* Meetings List */}
         <section>
@@ -276,15 +346,9 @@ export default function SalesDashboardPage() {
                         </div>
                       )}
 
-                      {/* Actions for PENDING meetings */}
+                      {/* Delete — only for PENDING meetings */}
                       {m.status === "PENDING" && (
                         <div className="flex gap-2">
-                          <button
-                            onClick={() => setEditingMeeting(m)}
-                            className="text-xs px-3 py-1.5 border border-border rounded-lg hover:bg-accent transition-colors font-medium"
-                          >
-                            Edit
-                          </button>
                           <button
                             onClick={() => handleDelete(m.id)}
                             disabled={deletingId === m.id}
@@ -302,134 +366,6 @@ export default function SalesDashboardPage() {
           )}
         </section>
       </div>
-
-      {/* Edit Meeting Modal */}
-      {editingMeeting && (
-        <EditMeetingModal
-          meeting={editingMeeting}
-          onClose={() => setEditingMeeting(null)}
-          onSaved={() => {
-            setEditingMeeting(null);
-            queryClient.invalidateQueries({ queryKey: ["meetings", user?.id] });
-          }}
-        />
-      )}
     </ClientOnly>
-  );
-}
-
-// ── Inline Edit Modal ─────────────────────────────────────────────────────────
-function EditMeetingModal({
-  meeting,
-  onClose,
-  onSaved,
-}: {
-  meeting: Meeting;
-  onClose: () => void;
-  onSaved: () => void;
-}) {
-  const [form, setForm] = useState({
-    prospect_name: meeting.prospect_name,
-    prospect_contact: meeting.prospect_contact,
-    scheduled_at: meeting.scheduled_at
-      ? new Date(meeting.scheduled_at).toISOString().slice(0, 16)
-      : "",
-    notes: meeting.notes ?? "",
-  });
-  const [saving, setSaving] = useState(false);
-
-  async function handleSave(e: React.FormEvent) {
-    e.preventDefault();
-    setSaving(true);
-    try {
-      // We need a PUT/PATCH that handles field updates for PENDING meetings.
-      // Since our PATCH only handles status changes, we'll use a direct DB update via a custom approach.
-      // For now, delete and re-create (since it's still PENDING, no payout exists).
-      // Actually, let's POST to a new meeting update endpoint.
-      // We'll add a special PATCH body with fields instead:
-      const res = await fetch(`/api/meetings/${meeting.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          prospect_name: form.prospect_name,
-          prospect_contact: form.prospect_contact,
-          scheduled_at: form.scheduled_at,
-          notes: form.notes,
-          _editFields: true,
-        }),
-      });
-      if (!res.ok) {
-        const e = await res.json();
-        throw new Error(e.error || "Update failed");
-      }
-      toast.success("Meeting updated.");
-      onSaved();
-    } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Update failed");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-md shadow-2xl animate-slide-up">
-        <h3 className="text-xl font-bold mb-6">Edit Meeting</h3>
-        <form onSubmit={handleSave} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-1.5">Prospect Name</label>
-            <input
-              required
-              className="w-full bg-input/50 border border-border rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand"
-              value={form.prospect_name}
-              onChange={(e) => setForm((p) => ({ ...p, prospect_name: e.target.value }))}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1.5">Contact</label>
-            <input
-              required
-              className="w-full bg-input/50 border border-border rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand"
-              value={form.prospect_contact}
-              onChange={(e) => setForm((p) => ({ ...p, prospect_contact: e.target.value }))}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1.5">Date & Time</label>
-            <input
-              type="datetime-local"
-              required
-              className="w-full bg-input/50 border border-border rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand"
-              value={form.scheduled_at}
-              onChange={(e) => setForm((p) => ({ ...p, scheduled_at: e.target.value }))}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1.5">Notes</label>
-            <textarea
-              className="w-full bg-input/50 border border-border rounded-xl px-4 py-2.5 min-h-[80px] focus:outline-none focus:ring-2 focus:ring-brand"
-              value={form.notes}
-              onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))}
-            />
-          </div>
-          <div className="flex gap-3 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 py-2.5 border border-border rounded-xl font-medium hover:bg-accent transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="flex-1 py-2.5 bg-brand text-white rounded-xl font-semibold hover:bg-brand-dark transition-colors disabled:opacity-50"
-            >
-              {saving ? "Saving…" : "Save Changes"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
   );
 }

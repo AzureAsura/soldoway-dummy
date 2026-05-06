@@ -10,8 +10,7 @@ import { useWalletBalance } from "@/hooks/use-wallet-balance";
 import bs58 from "bs58";
 
 const CATEGORIES = [
-  "SaaS", "Fintech", "Healthcare", "E-commerce", "Real Estate",
-  "Education", "Logistics", "HR & Recruiting", "Marketing", "Other",
+  "DeFi", "NFT", "AI", "CEX", "DEX", "Infra", "Security",
 ];
 
 export default function NewCampaignPage() {
