@@ -383,9 +383,10 @@ export default function BusinessDashboardPage() {
                   <tr>
                     <th className="px-5 py-3 text-left font-medium">Prospect</th>
                     <th className="px-5 py-3 text-left font-medium">Contact</th>
-                    <th className="px-5 py-3 text-left font-medium">Date</th>
+                    <th className="px-5 py-3 text-left font-medium">Date &amp; Time</th>
                     <th className="px-5 py-3 text-left font-medium">Notes</th>
                     <th className="px-5 py-3 text-left font-medium">Status</th>
+                    <th className="px-5 py-3 text-left font-medium">Cal.com</th>
                     <th className="px-5 py-3 text-left font-medium">Payout Tx</th>
                     <th className="px-5 py-3 text-left font-medium">Actions</th>
                   </tr>
@@ -395,8 +396,11 @@ export default function BusinessDashboardPage() {
                     <tr key={m.id} className="hover:bg-accent/40 transition-colors">
                       <td className="px-5 py-3 font-medium">{m.prospect_name}</td>
                       <td className="px-5 py-3 text-muted-foreground text-xs">{m.prospect_contact}</td>
-                      <td className="px-5 py-3 text-muted-foreground">
-                        {new Date(m.scheduled_at).toLocaleDateString()}
+                      <td className="px-5 py-3 text-muted-foreground whitespace-nowrap">
+                        {new Date(m.scheduled_at).toLocaleString(undefined, {
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                        })}
                       </td>
                       <td className="px-5 py-3 text-muted-foreground max-w-[180px] truncate">
                         {m.notes || "—"}
@@ -413,6 +417,20 @@ export default function BusinessDashboardPage() {
                         >
                           {m.status}
                         </span>
+                      </td>
+                      <td className="px-5 py-3">
+                        {m.calendar_event_id ? (
+                          <a
+                            href={`https://app.cal.com/booking/${m.calendar_event_id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-brand hover:underline font-medium inline-flex items-center gap-1 whitespace-nowrap"
+                          >
+                            📅 View Booking
+                          </a>
+                        ) : (
+                          <span className="text-muted-foreground text-xs">—</span>
+                        )}
                       </td>
                       <td className="px-5 py-3">
                         {m.payout?.tx_signature && m.payout.status === "SUCCESS" ? (

@@ -53,6 +53,7 @@ export type Meeting = {
   notes: string | null;
   outcome: Outcome | null;
   status: MeetingStatus;
+  calendar_event_id: string | null;
   created_at: string;
   // Relations
   campaign?: Campaign;

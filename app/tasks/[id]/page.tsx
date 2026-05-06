@@ -59,10 +59,22 @@ export default function TaskDetailPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to submit meeting");
 
-      toast.success("Meeting submitted!", {
-        id: toastId,
-        description: "Waiting for Business approval.",
-      });
+      if (data.cal_error) {
+        // Meeting IS saved to DB — dismiss the loading toast with success
+        toast.success("Meeting submitted!", {
+          id: toastId,
+          description: "Your meeting has been saved and is waiting for Business approval.",
+        });
+        // Separately warn that Cal.com booking failed (non-blocking)
+        toast.error("Cal.com booking unavailable", {
+          description: "This time slot is not available. Please choose a different date or time for the meeting.",
+        });
+      } else {
+        toast.success("Meeting submitted!", {
+          id: toastId,
+          description: "Cal.com booking confirmed. Waiting for Business approval.",
+        });
+      }
       setSubmitted(true);
       queryClient.invalidateQueries({ queryKey: ["meetings", user.id] });
       setTimeout(() => router.push("/dashboard/sales"), 2000);

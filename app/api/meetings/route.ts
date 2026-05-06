@@ -95,6 +95,7 @@ export async function POST(req: NextRequest) {
     });
 
     let calendar_event_id = null;
+    let cal_error = null;
     if (process.env.CAL_API_KEY) {
       try {
         const eventTypeId = process.env.CAL_EVENT_TYPE_ID
@@ -131,17 +132,21 @@ export async function POST(req: NextRequest) {
           console.log('[Cal.com] booking created, uid:', uid);
         } else {
           console.warn('[Cal.com] booking created but no uid in response:', JSON.stringify(calData).slice(0, 200));
+          if (calData.status === 'error') {
+            cal_error = calData.error?.message || "Booking failed";
+          }
         }
       } catch (err) {
         // Non-blocking: Cal.com errors must not prevent meeting submission
         console.error("[Cal.com] integration error (non-blocking):", err);
+        cal_error = err instanceof Error ? err.message : "Unknown error";
       }
     } else {
       console.log('[Cal.com] CAL_API_KEY not set, skipping booking.');
     }
 
     // Attach calendar_event_id to response
-    const finalMeeting = { ...meeting, calendar_event_id };
+    const finalMeeting = { ...meeting, calendar_event_id, cal_error };
 
     return NextResponse.json(finalMeeting, { status: 201 });
   } catch (err) {

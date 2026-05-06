@@ -223,11 +223,32 @@ export default function SalesDashboardPage() {
                         {" · "}
                         {m.prospect_contact}
                         {" · "}
-                        {new Date(m.scheduled_at).toLocaleDateString()}
+                        {new Date(m.scheduled_at).toLocaleString(undefined, {
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                        })}
                       </div>
                       {m.notes && (
                         <div className="text-xs text-muted-foreground mt-1 italic">
-                          "{m.notes}"
+                          &ldquo;{m.notes}&rdquo;
+                        </div>
+                      )}
+                      {m.calendar_event_id ? (
+                        <div className="mt-2">
+                          <a
+                            href={`https://app.cal.com/booking/${m.calendar_event_id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-brand hover:underline font-medium inline-flex items-center gap-1"
+                          >
+                            📅 View Cal.com Booking
+                          </a>
+                        </div>
+                      ) : (
+                        <div className="mt-1.5">
+                          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-warning/10 text-warning">
+                            ⚠ Cal.com booking not created
+                          </span>
                         </div>
                       )}
                     </div>
