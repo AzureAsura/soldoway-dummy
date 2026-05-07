@@ -1,12 +1,28 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Inter_Tight, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./components/providers";
 import { Navbar } from "./components/navbar";
+import { cn } from "@/lib/utils";
 
 const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
+});
+
+const interTight = Inter_Tight({
+  variable: "--font-inter-tight",
+  subsets: ["latin"],
+  weight: ["500", "600", "700", "800"],
+  display: "swap",
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  variable: "--font-jetbrains-mono",
+  subsets: ["latin"],
+  weight: ["400", "500", "700"],
   display: "swap",
 });
 
@@ -29,8 +45,15 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className="dark" suppressHydrationWarning>
-      <body className={`${inter.variable} antialiased`}>
+    <html lang="en" suppressHydrationWarning>
+      <body
+        className={cn(
+          inter.variable,
+          interTight.variable,
+          jetbrainsMono.variable,
+          "antialiased"
+        )}
+      >
         <Providers>
           <Navbar />
           <main>{children}</main>

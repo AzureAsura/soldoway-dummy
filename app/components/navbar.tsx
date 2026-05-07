@@ -103,7 +103,7 @@ import { usePrivy } from "@privy-io/react-auth";
 import { useAppStore } from "@/stores/app-store";
 import { usePathname } from "next/navigation";
 import { ClientOnly } from "./client-only";
-import { ArrowUpRight, Circle } from "lucide-react"; 
+import { ArrowUpRight, Circle } from "lucide-react";
 
 export function Navbar() {
   const { login, logout, authenticated } = usePrivy();
@@ -120,32 +120,31 @@ export function Navbar() {
 
   return (
     <ClientOnly>
+      <div className="fixed top-4 md:top-6 left-0 right-0 z-50 flex justify-center px-6">
+        <nav className="w-full max-w-6xl h-[64px] md:h-[72px] bg-[#F1F1F1]/80 backdrop-blur-xl border border-white/20 rounded-full px-4 md:px-8 flex items-center justify-between shadow-sm">
 
-      <div className="fixed top-6 left-0 right-0 z-50 flex justify-center px-6">
-        <nav className="w-full max-w-6xl h-[72px] bg-[#F1F1F1]/80 backdrop-blur-xl border border-white/20 rounded-[40px] px-8 flex items-center justify-between shadow-sm">
-          
           <Link
             href="/"
-            className="flex items-center gap-2 text-black font-bold text-2xl tracking-tight"
+            className="flex items-center gap-2 text-black font-bold text-xl md:text-2xl tracking-tight shrink-0"
           >
-            <Circle className="fill-black" size={24} />
+            <Circle className="fill-black w-5 h-5 md:w-6 md:h-6" />
             <span>Soldoway</span>
           </Link>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 md:gap-4">
             {authenticated ? (
               <>
                 {!role && (
                   <Link
                     href="/dashboard"
-                    className="text-sm font-semibold text-black/70 hover:text-black transition-colors"
+                    className="text-xs md:text-sm font-semibold text-black/70 hover:text-black transition-colors px-2"
                   >
                     Dashboard
                   </Link>
                 )}
                 <button
                   onClick={logout}
-                  className="bg-black text-white text-[15px] font-medium px-6 py-3 rounded-full flex items-center gap-2 hover:bg-black/80 transition-all active:scale-95"
+                  className="bg-black text-white text-[13px] md:text-[15px] font-medium px-4 md:px-6 py-2.5 md:py-3 rounded-full flex items-center gap-2 hover:bg-black/80 transition-all active:scale-95 whitespace-nowrap"
                 >
                   Logout
                 </button>
@@ -154,9 +153,9 @@ export function Navbar() {
               <button
                 onClick={login}
                 id="nav-login"
-                className="bg-black text-white text-[15px] font-medium px-7 py-3.5 rounded-full flex items-center gap-2 hover:bg-black/90 transition-all active:scale-95 shadow-lg"
+                className="bg-black text-white text-[13px] md:text-[15px] font-medium px-5 md:px-7 py-2.5 md:py-3.5 rounded-full flex items-center gap-2 hover:bg-black/90 transition-all active:scale-95 shadow-lg whitespace-nowrap"
               >
-                Get Started <ArrowUpRight size={18} />
+                Get Started <ArrowUpRight size={16} className="md:w-[18px]" />
               </button>
             )}
           </div>

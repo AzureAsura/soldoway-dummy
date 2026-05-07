@@ -4,6 +4,9 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
+import { useWallets } from "@privy-io/react-auth/solana";
+import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { ClientOnly } from "./client-only";
 
 type SidebarItem = {
@@ -11,6 +14,8 @@ type SidebarItem = {
   href: string;
   icon?: React.ReactNode;
 };
+
+type WalletLike = { walletClientType?: string; wallet?: { name?: string } };
 
 export function SidebarLayout({
   children,
@@ -23,16 +28,40 @@ export function SidebarLayout({
   const pathname = usePathname();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
+  // Prefer external wallet (Phantom) over Privy embedded — same priority as campaigns/new
+  const { wallets } = useWallets();
+  const connected =
+    wallets.find(
+      (w) =>
+        (w as WalletLike).walletClientType === "phantom" ||
+        (w as WalletLike).wallet?.name?.toLowerCase?.().includes("phantom")
+    ) ?? wallets[0];
+  const address = connected?.address ?? null;
+
+  const { data: balance, isLoading: balanceLoading } = useQuery<number>({
+    queryKey: ["connected-wallet-balance", address],
+    queryFn: async () => {
+      if (!address) return 0;
+      const { Connection, PublicKey } = await import("@solana/web3.js");
+      const rpcUrl =
+        process.env.NEXT_PUBLIC_SOLANA_RPC_URL || "https://api.devnet.solana.com";
+      const connection = new Connection(rpcUrl, "confirmed");
+      const lamports = await connection.getBalance(new PublicKey(address));
+      return lamports / 1e9;
+    },
+    enabled: Boolean(address),
+    refetchInterval: 20_000,
+    staleTime: 10_000,
+  });
+
   const businessLinks: SidebarItem[] = [
     { label: "Dashboard", href: "/dashboard/business" },
     { label: "New Campaign", href: "/campaigns/new" },
-    // { label: "Active Campaigns", href: "/dashboard/business" }, // Already on dashboard
   ];
 
   const salesLinks: SidebarItem[] = [
     { label: "Dashboard", href: "/dashboard/sales" },
     { label: "Browse Campaign", href: "/tasks" },
-    // { label: "Submitted Meetings", href: "/dashboard/sales" }, // Already on dashboard
     { label: "Referral", href: "/dashboard/sales/referral" },
   ];
 
@@ -94,7 +123,7 @@ export function SidebarLayout({
 
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Top Navbar for Mobile/General */}
+          {/* Top Navbar */}
           <header className="h-16 flex items-center justify-between px-4 lg:px-8 border-b border-gray-200 bg-white shrink-0">
             <div className="flex items-center lg:hidden">
               <button
@@ -121,12 +150,40 @@ export function SidebarLayout({
               {role === "BUSINESS" ? "Business Dashboard" : "Sales Dashboard"}
             </div>
 
-            {/* User Profile / Status Mock */}
-            <div className="flex items-center gap-3">
+            {/* Wallet balance + address */}
+            {address ? (
+              <div className="flex items-center gap-2 sm:gap-3">
+                {/* Balance pill — visible at all breakpoints */}
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-50 border border-gray-200">
+                  <span className="text-xs font-bold text-gray-500 uppercase tracking-wider hidden sm:inline">SOL</span>
+                  <span className="text-sm font-bold text-black tabular-nums">
+                    {balanceLoading || balance === undefined ? "…" : balance.toFixed(4)}
+                  </span>
+                </div>
+
+                {/* Address pill — click to copy; hidden below sm */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(address);
+                    toast.success("Address copied");
+                  }}
+                  title={address}
+                  className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-50 border border-gray-200 hover:bg-gray-100 transition-colors"
+                >
+                  <span className="w-6 h-6 rounded-full bg-black flex items-center justify-center text-white text-[10px] font-black">
+                    {role === "BUSINESS" ? "B" : "S"}
+                  </span>
+                  <span className="text-sm font-mono font-medium text-gray-700">
+                    {address.slice(0, 4)}…{address.slice(-4)}
+                  </span>
+                </button>
+              </div>
+            ) : (
               <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-bold text-gray-600">
                 {role === "BUSINESS" ? "B" : "S"}
               </div>
-            </div>
+            )}
           </header>
 
           {/* Page Content */}
