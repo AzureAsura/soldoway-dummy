@@ -79,7 +79,7 @@ export function Providers({ children }: PropsWithChildren) {
         }}
       >
         <AuthGuard>
-          <Toaster richColors position="top-right" />
+          <Toaster richColors position="bottom-right" />
           {children}
         </AuthGuard>
       </PrivyProvider>

@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useWalletBalance } from "@/hooks/use-wallet-balance";
 import { ClientOnly } from "@/app/components/client-only";
+import { SidebarLayout } from "@/app/components/sidebar-layout";
 import type { Campaign, Meeting } from "@/types";
 
 const MOCK_APY = 0.05;
@@ -189,90 +190,86 @@ export default function BusinessDashboardPage() {
   }
 
   return (
-    <ClientOnly>
-      <div className="max-w-6xl mx-auto px-6 py-10 animate-fade-in">
+    <SidebarLayout role="BUSINESS">
+      <div className="p-4 md:p-8 animate-fade-in space-y-12">
         {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Business Dashboard</h1>
-            <p className="text-muted-foreground mt-1">
+            <h1 className="text-3xl font-extrabold text-black tracking-tight">Business Dashboard</h1>
+            <p className="text-gray-500 mt-2 text-base">
               Manage campaigns, approve meetings, and track escrow yield.
             </p>
           </div>
           <Link
             href="/campaigns/new"
-            className="inline-flex items-center gap-2 bg-brand hover:bg-brand-dark text-white px-5 py-2.5 rounded-xl font-semibold transition-all shadow-sm hover:shadow-md"
+            className="inline-flex items-center justify-center bg-black hover:bg-gray-800 text-white px-6 py-3 rounded-lg text-sm font-semibold transition-colors shadow-sm"
           >
             + New Campaign
           </Link>
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {[
             {
               label: "Wallet Balance",
               value: balanceLoading ? "…" : `${(balance ?? 0).toFixed(4)} SOL`,
-              color: "",
             },
             {
               label: "Total Deposited",
               value: `${totalDeposit.toFixed(4)} SOL`,
-              color: "text-foreground",
             },
             {
               label: "Estimated Yield",
               value: `+${totalYield.toFixed(6)} SOL`,
-              color: "text-success",
-              badge: "5% APY",
+              badge: "5% APY Mock",
             },
             {
               label: "Budget Remaining",
               value: `${totalRemaining.toFixed(4)} SOL`,
-              color: "text-brand",
             },
           ].map((stat) => (
             <div
               key={stat.label}
-              className="bg-card border border-border rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow"
+              className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm flex flex-col justify-center"
             >
-              <div className="text-xs font-medium text-muted-foreground mb-1 uppercase tracking-wide">
-                {stat.label}
+              <div className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-2 flex items-center justify-between">
+                <span>{stat.label}</span>
+                {stat.badge && (
+                  <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-[10px] font-bold">
+                    {stat.badge}
+                  </span>
+                )}
               </div>
-              <div className={`text-2xl font-bold ${stat.color}`}>{stat.value}</div>
-              {stat.badge && (
-                <span className="text-[10px] bg-success/10 text-success px-1.5 py-0.5 rounded uppercase font-medium mt-1 inline-block">
-                  {stat.badge} Mock
-                </span>
-              )}
+              <div className="text-3xl font-bold text-black">{stat.value}</div>
             </div>
           ))}
         </div>
 
         {/* Active Campaigns */}
-        <section className="mb-12">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold">Active Campaigns</h2>
-            <span className="text-sm text-muted-foreground">
+        <section>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-black tracking-tight">Active Campaigns</h2>
+            <span className="text-sm font-medium text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
               {activeCampaigns.length} active
             </span>
           </div>
           {allCampaigns.length === 0 ? (
-            <div className="text-center py-16 border border-dashed border-border rounded-2xl bg-card">
-              <div className="text-4xl mb-4">📋</div>
-              <h3 className="text-lg font-semibold mb-2">No campaigns yet</h3>
-              <p className="text-muted-foreground mb-6">
-                Create a campaign to deposit SOL and start rewarding your sales team.
+            <div className="text-center py-20 border border-dashed border-gray-300 rounded-2xl bg-white flex flex-col items-center justify-center">
+              <div className="text-4xl mb-4 text-gray-300">📋</div>
+              <h3 className="text-lg font-bold text-black mb-2">No campaigns yet</h3>
+              <p className="text-gray-500 mb-6 max-w-md">
+                Create a campaign to deposit SOL and start rewarding your sales team for productive meetings.
               </p>
               <Link
                 href="/campaigns/new"
-                className="text-brand hover:underline font-medium"
+                className="text-black font-semibold hover:underline"
               >
                 Create your first campaign →
               </Link>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {allCampaigns.map((campaign) => {
                 const yieldEst = calculateYield(campaign);
                 const remaining = campaign.budget_total - campaign.budget_used;
@@ -282,22 +279,22 @@ export default function BusinessDashboardPage() {
                 return (
                   <div
                     key={campaign.id}
-                    className="bg-card border border-border rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow"
+                    className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm hover:border-gray-300 transition-colors flex flex-col"
                   >
-                    <div className="flex justify-between items-start mb-3">
-                      <div>
-                        <h3 className="font-bold text-lg leading-tight">{campaign.title}</h3>
-                        <p className="text-sm text-muted-foreground">
-                          {campaign.company} · {campaign.category}
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="pr-4">
+                        <h3 className="font-bold text-lg text-black leading-tight mb-1">{campaign.title}</h3>
+                        <p className="text-sm text-gray-500">
+                          {campaign.company} <span className="mx-1.5 text-gray-300">•</span> {campaign.category}
                         </p>
                       </div>
                       <span
-                        className={`text-xs font-bold px-2.5 py-1 rounded-full ${
+                        className={`text-xs font-bold px-2.5 py-1 rounded-md border ${
                           campaign.status === "ACTIVE"
-                            ? "bg-success/10 text-success"
+                            ? "bg-green-50 text-green-700 border-green-200"
                             : campaign.status === "CLOSED"
-                            ? "bg-warning/10 text-warning"
-                            : "bg-muted text-muted-foreground"
+                            ? "bg-yellow-50 text-yellow-700 border-yellow-200"
+                            : "bg-gray-50 text-gray-600 border-gray-200"
                         }`}
                       >
                         {campaign.status}
@@ -305,53 +302,53 @@ export default function BusinessDashboardPage() {
                     </div>
 
                     {/* Meeting capacity progress bar */}
-                    <div className="mb-4">
-                      <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                        <span>Meetings: {campaign.meetings_used}/{campaign.meeting_capacity}</span>
+                    <div className="mb-6 bg-gray-50 rounded-lg p-4 border border-gray-100">
+                      <div className="flex justify-between text-xs font-semibold text-gray-600 mb-2">
+                        <span>Meetings: {campaign.meetings_used} / {campaign.meeting_capacity}</span>
                         <span>{progress.toFixed(0)}%</span>
                       </div>
-                      <div className="h-1.5 bg-border rounded-full overflow-hidden">
+                      <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
                         <div
-                          className="h-full bg-brand rounded-full transition-all"
+                          className="h-full bg-black rounded-full transition-all"
                           style={{ width: `${Math.min(progress, 100)}%` }}
                         />
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-2 mb-4 text-center">
-                      <div className="bg-secondary rounded-lg p-2">
-                        <div className="text-xs text-muted-foreground">Reward</div>
-                        <div className="text-sm font-bold">{campaign.reward_per_meeting} SOL</div>
+                    <div className="grid grid-cols-3 gap-4 mb-6">
+                      <div className="flex flex-col">
+                        <span className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Reward</span>
+                        <span className="text-base font-bold text-black">{campaign.reward_per_meeting} SOL</span>
                       </div>
-                      <div className="bg-secondary rounded-lg p-2">
-                        <div className="text-xs text-muted-foreground">Remaining</div>
-                        <div className="text-sm font-bold">{remaining.toFixed(3)} SOL</div>
+                      <div className="flex flex-col border-l border-gray-100 pl-4">
+                        <span className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Remaining</span>
+                        <span className="text-base font-bold text-black">{remaining.toFixed(3)} SOL</span>
                       </div>
-                      <div className="bg-success/5 border border-success/20 rounded-lg p-2">
-                        <div className="text-xs text-muted-foreground">Est. Yield</div>
-                        <div className="text-sm font-bold text-success">+{yieldEst.toFixed(4)}</div>
+                      <div className="flex flex-col border-l border-gray-100 pl-4">
+                        <span className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Est. Yield</span>
+                        <span className="text-base font-bold text-green-600">+{yieldEst.toFixed(4)}</span>
                       </div>
                     </div>
 
                     {/* Tx link */}
                     {campaign.tx_signature && (
-                      <div className="text-xs text-muted-foreground mb-3">
-                        Deposit tx:{" "}
+                      <div className="text-xs text-gray-400 mb-5 flex items-center gap-2">
+                        <span>Deposit Tx:</span>
                         <a
                           href={`https://explorer.solana.com/tx/${campaign.tx_signature}?cluster=devnet`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-brand hover:underline font-mono"
+                          className="text-black hover:underline font-mono bg-gray-50 px-2 py-0.5 rounded"
                         >
                           {campaign.tx_signature.slice(0, 8)}…
                         </a>
                       </div>
                     )}
 
-                    <div className="flex gap-2">
+                    <div className="mt-auto flex gap-3 pt-4 border-t border-gray-100">
                       <Link
                         href={`/campaigns/${campaign.id}`}
-                        className="flex-1 text-center text-sm py-2 bg-secondary hover:bg-accent border border-border rounded-lg font-medium transition-colors"
+                        className="flex-1 flex items-center justify-center text-sm py-2 bg-white hover:bg-gray-50 text-black border border-gray-300 rounded-lg font-medium transition-colors"
                       >
                         View Details
                       </Link>
@@ -359,7 +356,7 @@ export default function BusinessDashboardPage() {
                         <button
                           onClick={() => handleWithdraw(campaign)}
                           disabled={withdrawingId === campaign.id}
-                          className="text-sm px-4 py-2 border border-destructive text-destructive hover:bg-destructive/10 rounded-lg font-medium transition-colors disabled:opacity-50"
+                          className="flex items-center justify-center text-sm px-5 py-2 border border-red-200 text-red-600 hover:bg-red-50 rounded-lg font-medium transition-colors disabled:opacity-50"
                         >
                           {withdrawingId === campaign.id ? "…" : "Withdraw"}
                         </button>
@@ -374,93 +371,95 @@ export default function BusinessDashboardPage() {
 
         {/* Meeting Log */}
         <section>
-          <h2 className="text-xl font-bold mb-4">Meeting Log</h2>
+          <h2 className="text-2xl font-bold text-black tracking-tight mb-6">Meeting Log</h2>
           {!allMeetings || allMeetings.length === 0 ? (
-            <div className="text-center py-10 border border-dashed border-border rounded-2xl bg-card text-muted-foreground text-sm">
+            <div className="text-center py-16 border border-dashed border-gray-300 rounded-2xl bg-white text-gray-500 text-sm">
               No meetings submitted yet.
             </div>
           ) : (
-            <div className="bg-card border border-border rounded-2xl overflow-hidden">
-              <table className="w-full text-sm">
-                <thead className="bg-secondary text-muted-foreground text-xs uppercase">
+            <div className="bg-white border border-gray-200 rounded-xl overflow-x-auto shadow-sm">
+              <table className="w-full text-sm text-left">
+                <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
-                    <th className="px-5 py-3 text-left font-medium">Prospect</th>
-                    <th className="px-5 py-3 text-left font-medium">Contact</th>
-                    <th className="px-5 py-3 text-left font-medium">Date &amp; Time</th>
-                    <th className="px-5 py-3 text-left font-medium">Notes</th>
-                    <th className="px-5 py-3 text-left font-medium">Status</th>
-                    <th className="px-5 py-3 text-left font-medium">Cal.com</th>
-                    <th className="px-5 py-3 text-left font-medium">Payout Tx</th>
-                    <th className="px-5 py-3 text-left font-medium">Actions</th>
+                    <th className="px-6 py-4 font-semibold text-gray-500 uppercase tracking-wider text-xs">Prospect</th>
+                    <th className="px-6 py-4 font-semibold text-gray-500 uppercase tracking-wider text-xs">Contact</th>
+                    <th className="px-6 py-4 font-semibold text-gray-500 uppercase tracking-wider text-xs">Date &amp; Time</th>
+                    <th className="px-6 py-4 font-semibold text-gray-500 uppercase tracking-wider text-xs">Notes</th>
+                    <th className="px-6 py-4 font-semibold text-gray-500 uppercase tracking-wider text-xs">Status</th>
+                    <th className="px-6 py-4 font-semibold text-gray-500 uppercase tracking-wider text-xs">Cal.com</th>
+                    <th className="px-6 py-4 font-semibold text-gray-500 uppercase tracking-wider text-xs">Payout Tx</th>
+                    <th className="px-6 py-4 font-semibold text-gray-500 uppercase tracking-wider text-xs">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-border">
+                <tbody className="divide-y divide-gray-100">
                   {allMeetings.map((m) => (
-                    <tr key={m.id} className="hover:bg-accent/40 transition-colors">
-                      <td className="px-5 py-3 font-medium">{m.prospect_name}</td>
-                      <td className="px-5 py-3 text-muted-foreground text-xs">{m.prospect_contact}</td>
-                      <td className="px-5 py-3 text-muted-foreground whitespace-nowrap">
+                    <tr key={m.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-4 font-medium text-black whitespace-nowrap">{m.prospect_name}</td>
+                      <td className="px-6 py-4 text-gray-600 text-xs whitespace-nowrap">{m.prospect_contact}</td>
+                      <td className="px-6 py-4 text-gray-600 whitespace-nowrap text-xs">
                         {new Date(m.scheduled_at).toLocaleString(undefined, {
                           dateStyle: "medium",
                           timeStyle: "short",
                         })}
                       </td>
-                      <td className="px-5 py-3 text-muted-foreground max-w-[180px] truncate">
+                      <td className="px-6 py-4 text-gray-600 max-w-[200px] truncate text-xs" title={m.notes || ""}>
                         {m.notes || "—"}
                       </td>
-                      <td className="px-5 py-3">
+                      <td className="px-6 py-4 whitespace-nowrap">
                         <span
-                          className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                          className={`text-[10px] font-bold px-2.5 py-1 rounded-md uppercase tracking-wide border ${
                             m.status === "APPROVED"
-                              ? "bg-success/10 text-success"
+                              ? "bg-green-50 text-green-700 border-green-200"
                               : m.status === "REJECTED"
-                              ? "bg-destructive/10 text-destructive"
-                              : "bg-warning/10 text-warning"
+                              ? "bg-red-50 text-red-700 border-red-200"
+                              : "bg-yellow-50 text-yellow-700 border-yellow-200"
                           }`}
                         >
                           {m.status}
                         </span>
                       </td>
-                      <td className="px-5 py-3">
+                      <td className="px-6 py-4 whitespace-nowrap">
                         {m.calendar_event_id ? (
                           <a
                             href={`https://app.cal.com/booking/${m.calendar_event_id}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-xs text-brand hover:underline font-medium inline-flex items-center gap-1 whitespace-nowrap"
+                            className="text-xs text-black border border-gray-200 hover:bg-gray-100 px-3 py-1.5 rounded-md font-medium inline-flex items-center gap-1.5 transition-colors"
                           >
-                            📅 View Booking
+                            <span>📅</span> View Booking
                           </a>
                         ) : (
-                          <span className="text-muted-foreground text-xs">—</span>
+                          <span className="text-gray-400 text-xs italic">—</span>
                         )}
                       </td>
-                      <td className="px-5 py-3">
+                      <td className="px-6 py-4 whitespace-nowrap">
                         {m.payout?.tx_signature && m.payout.status === "SUCCESS" ? (
-                          <ExplorerLink sig={m.payout.tx_signature} />
+                          <div className="bg-gray-50 border border-gray-200 px-2 py-1 rounded inline-block">
+                            <ExplorerLink sig={m.payout.tx_signature} />
+                          </div>
                         ) : (
-                          <span className="text-muted-foreground text-xs">—</span>
+                          <span className="text-gray-400 text-xs italic">—</span>
                         )}
                       </td>
-                      <td className="px-5 py-3">
+                      <td className="px-6 py-4 whitespace-nowrap">
                         {m.status === "PENDING" ? (
-                          <div className="flex gap-1">
+                          <div className="flex gap-2">
                             <button
                               onClick={() => handleApprove(m)}
                               disabled={approvingId === m.id}
-                              className="text-xs px-3 py-1 bg-success/10 hover:bg-success/20 text-success border border-success/30 rounded-lg font-medium transition-colors disabled:opacity-50"
+                              className="text-xs px-3 py-1.5 bg-black text-white hover:bg-gray-800 rounded-md font-medium transition-colors disabled:opacity-50"
                             >
                               {approvingId === m.id ? "…" : "Approve"}
                             </button>
                             <button
                               onClick={() => handleReject(m)}
-                              className="text-xs px-3 py-1 bg-destructive/10 hover:bg-destructive/20 text-destructive border border-destructive/30 rounded-lg font-medium transition-colors"
+                              className="text-xs px-3 py-1.5 bg-white text-red-600 border border-red-200 hover:bg-red-50 rounded-md font-medium transition-colors"
                             >
                               Reject
                             </button>
                           </div>
                         ) : (
-                          <span className="text-muted-foreground text-xs">—</span>
+                          <span className="text-gray-400 text-xs italic">—</span>
                         )}
                       </td>
                     </tr>
@@ -471,6 +470,6 @@ export default function BusinessDashboardPage() {
           )}
         </section>
       </div>
-    </ClientOnly>
+    </SidebarLayout>
   );
 }

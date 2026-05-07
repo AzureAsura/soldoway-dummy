@@ -111,10 +111,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const amount = campaign.reward_per_meeting;
     let salesAmount = amount;
     let referrerBonus = 0;
-    
+
     const tx = new Transaction();
 
     // Calculate referral split
@@ -122,7 +121,7 @@ export async function POST(req: NextRequest) {
       const platformFee = amount * 0.02;
       referrerBonus = platformFee * 0.5;
       salesAmount = amount - platformFee;
-      
+
       const platformWallet = process.env.PLATFORM_WALLET_ADDRESS;
       if (platformWallet) {
         tx.add(
@@ -133,7 +132,7 @@ export async function POST(req: NextRequest) {
           })
         );
       }
-      
+
       tx.add(
         SystemProgram.transfer({
           fromPubkey: serverKeypair.publicKey,
@@ -157,7 +156,7 @@ export async function POST(req: NextRequest) {
       const { blockhash } = await connection.getLatestBlockhash("confirmed");
       tx.recentBlockhash = blockhash;
       tx.feePayer = serverKeypair.publicKey;
-      
+
       console.log(`[approvePayout] Sending ${salesAmount} SOL to ${salesPubkey.toBase58()}`);
       signature = await sendAndConfirmTransaction(connection, tx, [serverKeypair]);
       console.log(`[approvePayout] Transaction successful: ${signature}`);

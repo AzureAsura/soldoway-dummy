@@ -7,6 +7,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useCampaign } from "@/hooks/use-campaigns";
 import { ClientOnly } from "@/app/components/client-only";
+import { SidebarLayout } from "@/app/components/sidebar-layout";
 
 export default function TaskDetailPage() {
   const { id } = useParams() as { id: string };
@@ -110,56 +111,56 @@ export default function TaskDetailPage() {
   const isFull = remaining <= 0;
 
   return (
-    <ClientOnly>
-      <div className="max-w-4xl mx-auto px-6 py-10 animate-fade-in">
-        <div className="grid md:grid-cols-5 gap-8">
+    <SidebarLayout role="SALES">
+      <div className="max-w-5xl mx-auto p-4 md:p-8 animate-fade-in">
+        <div className="grid md:grid-cols-5 gap-10">
           {/* Campaign Info — left panel */}
           <div className="md:col-span-2">
-            <div className="bg-card border border-border rounded-2xl p-6 shadow-sm sticky top-24">
+            <div className="bg-white border border-gray-200 rounded-xl p-6 md:p-8 shadow-sm sticky top-24">
               <div className="mb-4">
-                <span className="text-xs bg-secondary px-2 py-0.5 rounded font-medium">
+                <span className="text-xs bg-gray-50 border border-gray-200 text-gray-600 px-2.5 py-1 rounded-md font-medium">
                   {campaign.category}
                 </span>
               </div>
-              <h1 className="text-xl font-bold mb-1">{campaign.title}</h1>
-              <p className="text-sm text-muted-foreground mb-4">{campaign.company}</p>
+              <h1 className="text-2xl font-bold text-black mb-1">{campaign.title}</h1>
+              <p className="text-sm text-gray-500 mb-6">{campaign.company}</p>
 
               {campaign.description && (
-                <p className="text-sm text-muted-foreground leading-relaxed mb-6 border-t border-border pt-4">
+                <div className="text-sm text-gray-600 leading-relaxed mb-6 bg-gray-50 border border-gray-100 p-4 rounded-lg">
                   {campaign.description}
-                </p>
+                </div>
               )}
 
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Reward</span>
-                  <span className="text-lg font-bold text-brand">
+              <div className="space-y-4">
+                <div className="flex justify-between items-center border-b border-gray-100 pb-3">
+                  <span className="text-sm font-semibold text-gray-500 uppercase tracking-widest">Reward</span>
+                  <span className="text-lg font-bold text-black">
                     {campaign.reward_per_meeting} SOL
                   </span>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Slots Left</span>
-                  <span className={`text-sm font-bold ${isFull ? "text-destructive" : "text-success"}`}>
+                <div className="flex justify-between items-center border-b border-gray-100 pb-3">
+                  <span className="text-sm font-semibold text-gray-500 uppercase tracking-widest">Slots Left</span>
+                  <span className={`text-sm font-bold ${isFull ? "text-red-600" : "text-green-600"}`}>
                     {isFull ? "Full" : `${remaining} remaining`}
                   </span>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Budget Left</span>
-                  <span className="text-sm font-semibold">
+                <div className="flex justify-between items-center border-b border-gray-100 pb-3">
+                  <span className="text-sm font-semibold text-gray-500 uppercase tracking-widest">Budget Left</span>
+                  <span className="text-sm font-bold text-black">
                     {(campaign.budget_total - campaign.budget_used).toFixed(2)} SOL
                   </span>
                 </div>
               </div>
 
               {/* Capacity bar */}
-              <div className="mt-5">
-                <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                  <span>Capacity</span>
+              <div className="mt-6">
+                <div className="flex justify-between text-xs font-semibold text-gray-500 mb-2">
+                  <span className="uppercase tracking-widest">Capacity</span>
                   <span>{campaign.meetings_used}/{campaign.meeting_capacity}</span>
                 </div>
-                <div className="h-2 bg-border rounded-full overflow-hidden">
+                <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-brand rounded-full"
+                    className="h-full bg-black rounded-full transition-all duration-500"
                     style={{
                       width: `${Math.min((campaign.meetings_used / campaign.meeting_capacity) * 100, 100)}%`,
                     }}
@@ -171,38 +172,38 @@ export default function TaskDetailPage() {
 
           {/* Submit Meeting Form — right panel */}
           <div className="md:col-span-3">
-            <h2 className="text-2xl font-bold mb-6">Submit Meeting</h2>
+            <h2 className="text-3xl font-extrabold text-black tracking-tight mb-8">Submit Meeting</h2>
 
             {submitted ? (
-              <div className="bg-success/5 border border-success/30 rounded-2xl p-8 text-center animate-fade-in">
-                <div className="text-5xl mb-4">🎉</div>
-                <h3 className="text-xl font-bold mb-2">Meeting Submitted!</h3>
-                <p className="text-muted-foreground">
+              <div className="bg-green-50 border border-green-200 rounded-xl p-10 text-center animate-fade-in flex flex-col items-center justify-center">
+                <div className="text-5xl mb-6">🎉</div>
+                <h3 className="text-2xl font-bold text-black mb-3">Meeting Submitted!</h3>
+                <p className="text-green-800 font-medium">
                   Your meeting is pending approval. Once approved, your reward will be paid automatically.
                 </p>
-                <p className="text-sm text-muted-foreground mt-3">Redirecting to dashboard…</p>
+                <p className="text-sm text-green-600 mt-6 font-semibold">Redirecting to dashboard…</p>
               </div>
             ) : isFull ? (
-              <div className="bg-card border border-border rounded-2xl p-8 text-center">
-                <div className="text-4xl mb-4">🔒</div>
-                <h3 className="text-xl font-bold mb-2">Campaign Full</h3>
-                <p className="text-muted-foreground">
+              <div className="bg-white border border-gray-200 rounded-xl p-10 text-center shadow-sm flex flex-col items-center justify-center">
+                <div className="text-5xl mb-6 text-gray-300">🔒</div>
+                <h3 className="text-2xl font-bold text-black mb-3">Campaign Full</h3>
+                <p className="text-gray-500">
                   This campaign has reached its meeting capacity. Check other campaigns.
                 </p>
               </div>
             ) : (
               <form
                 onSubmit={handleSubmit}
-                className="bg-card border border-border rounded-2xl p-6 shadow-sm space-y-5"
+                className="bg-white border border-gray-200 rounded-xl p-6 md:p-8 shadow-sm space-y-6"
               >
                 <div>
-                  <label className="block text-sm font-medium mb-1.5">
-                    Prospect Name <span className="text-destructive">*</span>
+                  <label className="block text-sm font-bold text-black mb-2">
+                    Prospect Name <span className="text-red-500">*</span>
                   </label>
                   <input
                     required
                     type="text"
-                    className="w-full bg-secondary border border-border rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand"
+                    className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-black focus:outline-none focus:ring-2 focus:ring-black focus:bg-white transition-all"
                     placeholder="e.g., John Doe – Acme Corp"
                     value={form.prospect_name}
                     onChange={(e) => setForm((p) => ({ ...p, prospect_name: e.target.value }))}
@@ -210,13 +211,13 @@ export default function TaskDetailPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-1.5">
-                    Prospect Contact <span className="text-destructive">*</span>
+                  <label className="block text-sm font-bold text-black mb-2">
+                    Prospect Contact <span className="text-red-500">*</span>
                   </label>
                   <input
                     required
                     type="text"
-                    className="w-full bg-secondary border border-border rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand"
+                    className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-black focus:outline-none focus:ring-2 focus:ring-black focus:bg-white transition-all"
                     placeholder="Phone number or email address"
                     value={form.prospect_contact}
                     onChange={(e) => setForm((p) => ({ ...p, prospect_contact: e.target.value }))}
@@ -224,24 +225,24 @@ export default function TaskDetailPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-1.5">
-                    Date & Time of Meeting <span className="text-destructive">*</span>
+                  <label className="block text-sm font-bold text-black mb-2">
+                    Date & Time of Meeting <span className="text-red-500">*</span>
                   </label>
                   <input
                     required
                     type="datetime-local"
-                    className="w-full bg-secondary border border-border rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand"
+                    className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-black focus:outline-none focus:ring-2 focus:ring-black focus:bg-white transition-all"
                     value={form.scheduled_at}
                     onChange={(e) => setForm((p) => ({ ...p, scheduled_at: e.target.value }))}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-1.5">
+                  <label className="block text-sm font-bold text-black mb-2">
                     Meeting Notes
                   </label>
                   <textarea
-                    className="w-full bg-secondary border border-border rounded-xl px-4 py-3 min-h-[120px] focus:outline-none focus:ring-2 focus:ring-brand resize-none"
+                    className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-black min-h-[140px] focus:outline-none focus:ring-2 focus:ring-black focus:bg-white transition-all resize-none"
                     placeholder="Briefly describe what happened during the meeting, the prospect's interest level, any follow-up agreed, etc."
                     value={form.notes}
                     onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))}
@@ -252,12 +253,12 @@ export default function TaskDetailPage() {
                   type="submit"
                   disabled={isSubmitting}
                   id="submit-meeting-btn"
-                  className="w-full bg-brand hover:bg-brand-dark text-white font-bold py-4 rounded-xl transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-black hover:bg-gray-800 text-white font-bold py-4 rounded-lg transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed text-base mt-2"
                 >
                   {isSubmitting ? "Submitting…" : `Submit Meeting → Earn ${campaign.reward_per_meeting} SOL`}
                 </button>
 
-                <p className="text-xs text-muted-foreground text-center">
+                <p className="text-sm text-gray-500 text-center font-medium pt-2 border-t border-gray-100">
                   After the Business approves your meeting, your reward will be paid to your wallet automatically.
                 </p>
               </form>
@@ -265,6 +266,6 @@ export default function TaskDetailPage() {
           </div>
         </div>
       </div>
-    </ClientOnly>
+    </SidebarLayout>
   );
 }

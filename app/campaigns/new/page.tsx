@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { useWalletBalance } from "@/hooks/use-wallet-balance";
 import bs58 from "bs58";
+import { SidebarLayout } from "@/app/components/sidebar-layout";
 
 const CATEGORIES = [
   "DeFi", "NFT", "AI", "CEX", "DEX", "Infra", "Security",
@@ -71,7 +72,7 @@ export default function NewCampaignPage() {
       const { Connection, Keypair, PublicKey, SystemProgram, Transaction, TransactionMessage, VersionedTransaction } = await import("@solana/web3.js");
       const escrowKeypair = Keypair.generate();
       const mockPda = escrowKeypair.publicKey.toBase58();
-      
+
       let txSignature = "mock_tx_" + Date.now();
 
       // Only attempt real transaction if user has a connected solana wallet
@@ -187,10 +188,10 @@ export default function NewCampaignPage() {
     props?: React.InputHTMLAttributes<HTMLInputElement>
   ) => (
     <div>
-      <label className="block text-sm font-medium mb-1.5">{label}</label>
+      <label className="block text-sm font-bold text-black mb-2">{label}</label>
       <input
         {...props}
-        className="w-full bg-secondary border border-border rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand transition-shadow"
+        className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-black focus:outline-none focus:ring-2 focus:ring-black focus:bg-white transition-all"
         value={form[key]}
         onChange={(e) => setForm((p) => ({ ...p, [key]: e.target.value }))}
       />
@@ -198,137 +199,139 @@ export default function NewCampaignPage() {
   );
 
   return (
-    <div className="max-w-2xl mx-auto px-6 py-10 animate-fade-in">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight mb-2">Create Campaign</h1>
-        <p className="text-muted-foreground">
-          Deposit SOL into escrow and reward your sales team for every productive meeting.
-        </p>
-      </div>
-
-      <form
-        onSubmit={handleSubmit}
-        className="bg-card border border-border rounded-2xl p-7 shadow-sm space-y-6"
-      >
-        {/* Basic Info */}
-        <div className="space-y-4">
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-            Campaign Details
-          </h2>
-          {field("Campaign Title *", "title", {
-            required: true,
-            placeholder: "e.g., Enterprise SaaS Q3 Outreach",
-          })}
-          <div className="grid grid-cols-2 gap-4">
-            {field("Company *", "company", {
-              required: true,
-              placeholder: "e.g., Acme Corp",
-            })}
-            <div>
-              <label className="block text-sm font-medium mb-1.5">Category *</label>
-              <select
-                required
-                className="w-full bg-secondary border border-border rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand"
-                value={form.category}
-                onChange={(e) => setForm((p) => ({ ...p, category: e.target.value }))}
-              >
-                <option value="">Select category…</option>
-                {CATEGORIES.map((c) => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1.5">Description</label>
-            <textarea
-              className="w-full bg-secondary border border-border rounded-xl px-4 py-3 min-h-[100px] focus:outline-none focus:ring-2 focus:ring-brand"
-              placeholder="What counts as a productive meeting? Any requirements for the sales rep?"
-              value={form.description}
-              onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
-            />
-          </div>
+    <SidebarLayout role="BUSINESS">
+      <div className="p-4 md:p-8 animate-fade-in mx-auto space-y-8">
+        <div>
+          <h1 className="text-3xl font-extrabold text-black tracking-tight mb-2">Create Campaign</h1>
+          <p className="text-gray-500 text-base">
+            Deposit SOL into escrow and reward your sales team for every productive meeting.
+          </p>
         </div>
 
-        {/* Escrow Config */}
-        <div className="space-y-4 pt-2">
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-            Escrow & Rewards
-          </h2>
-          <div className="grid grid-cols-2 gap-4">
-            {field("Payout per Meeting (SOL) *", "reward_per_meeting", {
-              required: true,
-              type: "number",
-              step: "0.001",
-              min: "0.001",
-              placeholder: "0.5",
-            })}
-            {field("Meeting Capacity *", "meeting_capacity", {
-              required: true,
-              type: "number",
-              min: "1",
-              step: "1",
-              placeholder: "20",
-            })}
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1.5">
-              Total Vault Deposit (SOL) *
-            </label>
-            <input
-              required
-              type="number"
-              step="0.001"
-              min="0.001"
-              className="w-full bg-secondary border border-border rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand"
-              placeholder={minBudget > 0 ? `Min: ${minBudget.toFixed(3)}` : "10.0"}
-              value={form.budget_total}
-              onChange={(e) => setForm((p) => ({ ...p, budget_total: e.target.value }))}
-            />
-            <div className="flex justify-between text-xs text-muted-foreground mt-1.5">
-              <span>
-                Min required:{" "}
-                <span className={budget < minBudget && minBudget > 0 ? "text-destructive font-semibold" : ""}>
-                  {minBudget > 0 ? `${minBudget.toFixed(4)} SOL` : "—"}
-                </span>
-              </span>
-              <span>
-                Your balance:{" "}
-                <span className={balance !== undefined && budget > balance ? "text-destructive font-semibold" : ""}>
-                  {balance?.toFixed(4) ?? "…"} SOL
-                </span>
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Summary */}
-        {reward > 0 && capacity > 0 && budget >= minBudget && (
-          <div className="bg-brand/5 border border-brand/20 rounded-xl p-4 text-sm space-y-1">
-            <div className="font-semibold text-brand mb-2">Campaign Summary</div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Max meetings rewarded</span>
-              <span className="font-medium">{capacity}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Reward per meeting</span>
-              <span className="font-medium">{reward} SOL</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Total escrowed</span>
-              <span className="font-bold">{budget} SOL</span>
-            </div>
-          </div>
-        )}
-
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="w-full bg-brand hover:bg-brand-dark text-white font-bold py-4 rounded-xl transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed text-base"
+        <form
+          onSubmit={handleSubmit}
+          className="bg-white border border-gray-200 rounded-xl p-6 md:p-8 shadow-sm space-y-8"
         >
-          {isSubmitting ? "Creating Campaign…" : "Deposit & Create Campaign →"}
-        </button>
-      </form>
-    </div>
+          {/* Basic Info */}
+          <div className="space-y-5">
+            <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest border-b border-gray-100 pb-2">
+              Campaign Details
+            </h2>
+            {field("Campaign Title *", "title", {
+              required: true,
+              placeholder: "e.g., Enterprise SaaS Q3 Outreach",
+            })}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {field("Company *", "company", {
+                required: true,
+                placeholder: "e.g., Acme Corp",
+              })}
+              <div>
+                <label className="block text-sm font-bold text-black mb-2">Category *</label>
+                <select
+                  required
+                  className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-black focus:outline-none focus:ring-2 focus:ring-black focus:bg-white transition-all"
+                  value={form.category}
+                  onChange={(e) => setForm((p) => ({ ...p, category: e.target.value }))}
+                >
+                  <option value="">Select category…</option>
+                  {CATEGORIES.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-bold text-black mb-2">Description</label>
+              <textarea
+                className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 min-h-[120px] text-black focus:outline-none focus:ring-2 focus:ring-black focus:bg-white transition-all"
+                placeholder="What counts as a productive meeting? Any requirements for the sales rep?"
+                value={form.description}
+                onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
+              />
+            </div>
+          </div>
+
+          {/* Escrow Config */}
+          <div className="space-y-5">
+            <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest border-b border-gray-100 pb-2">
+              Escrow & Rewards
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {field("Payout per Meeting (SOL) *", "reward_per_meeting", {
+                required: true,
+                type: "number",
+                step: "0.001",
+                min: "0.001",
+                placeholder: "0.5",
+              })}
+              {field("Meeting Capacity *", "meeting_capacity", {
+                required: true,
+                type: "number",
+                min: "1",
+                step: "1",
+                placeholder: "20",
+              })}
+            </div>
+            <div>
+              <label className="block text-sm font-bold text-black mb-2">
+                Total Vault Deposit (SOL) *
+              </label>
+              <input
+                required
+                type="number"
+                step="0.001"
+                min="0.001"
+                className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-black focus:outline-none focus:ring-2 focus:ring-black focus:bg-white transition-all"
+                placeholder={minBudget > 0 ? `Min: ${minBudget.toFixed(3)}` : "10.0"}
+                value={form.budget_total}
+                onChange={(e) => setForm((p) => ({ ...p, budget_total: e.target.value }))}
+              />
+              <div className="flex justify-between text-xs text-gray-500 mt-2">
+                <span>
+                  Min required:{" "}
+                  <span className={budget < minBudget && minBudget > 0 ? "text-red-600 font-bold" : "font-medium"}>
+                    {minBudget > 0 ? `${minBudget.toFixed(4)} SOL` : "—"}
+                  </span>
+                </span>
+                <span>
+                  Your balance:{" "}
+                  <span className={balance !== undefined && budget > balance ? "text-red-600 font-bold" : "font-medium text-black"}>
+                    {balance?.toFixed(4) ?? "…"} SOL
+                  </span>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Summary */}
+          {reward > 0 && capacity > 0 && budget >= minBudget && (
+            <div className="bg-gray-50 border border-gray-200 rounded-xl p-5 text-sm space-y-3">
+              <div className="font-bold text-black border-b border-gray-200 pb-2">Campaign Summary</div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600 font-medium">Max meetings rewarded</span>
+                <span className="font-bold text-black">{capacity}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600 font-medium">Reward per meeting</span>
+                <span className="font-bold text-black">{reward} SOL</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600 font-medium">Total escrowed</span>
+                <span className="font-bold text-green-600 text-base">{budget} SOL</span>
+              </div>
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="w-full bg-black hover:bg-gray-800 text-white font-bold py-4 rounded-lg transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed text-base mt-4"
+          >
+            {isSubmitting ? "Creating Campaign…" : "Deposit & Create Campaign →"}
+          </button>
+        </form>
+      </div>
+    </SidebarLayout>
   );
 }
