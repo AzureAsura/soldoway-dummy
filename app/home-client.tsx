@@ -112,7 +112,7 @@ export default function HomeClient() {
                 id="cta-get-started"
                 onClick={handleGetStarted}
                 disabled={!ready}
-                className="inline-flex items-center justify-center gap-2 bg-accent text-foreground font-heading font-semibold px-7 py-4 rounded-full transition-all duration-200 hover:-translate-y-0.5 active:scale-[0.98] disabled:opacity-50"
+                className="inline-flex items-center justify-center gap-2 bg-black text-white font-heading font-semibold px-7 py-4 rounded-full transition-all duration-200 hover:-translate-y-0.5 active:scale-[0.98] disabled:opacity-50"
               >
                 Get Started <ArrowRight className="w-5 h-5" />
               </button>

@@ -104,6 +104,7 @@ import { useAppStore } from "@/stores/app-store";
 import { usePathname } from "next/navigation";
 import { ClientOnly } from "./client-only";
 import { ArrowUpRight, Circle } from "lucide-react";
+import Image from "next/image";
 
 export function Navbar() {
   const { login, logout, authenticated } = usePrivy();
@@ -127,7 +128,7 @@ export function Navbar() {
             href="/"
             className="flex items-center gap-2 text-black font-bold text-xl md:text-2xl tracking-tight shrink-0"
           >
-            <Circle className="fill-black w-5 h-5 md:w-6 md:h-6" />
+            <Image src={'/icon.svg'} alt="logo" priority width={30} height={30}/>
             <span>Soldoway</span>
           </Link>
 

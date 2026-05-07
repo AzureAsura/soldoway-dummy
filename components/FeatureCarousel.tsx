@@ -111,8 +111,7 @@ export function FeatureCarousel() {
                 ))}
               </CarouselContent>
               
-              {/* Navigation - Solid Minimalist */}
-              <div className="flex items-center gap-4 mt-8">
+              <div className="flex items-center gap-4 mt-8 justify-end">
                 <CarouselPrevious className="static translate-y-0 translate-x-0 h-14 w-14 border-2 border-black bg-white text-black hover:bg-black hover:text-white transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none" />
                 <CarouselNext className="static translate-y-0 translate-x-0 h-14 w-14 border-2 border-black bg-white text-black hover:bg-black hover:text-white transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none" />
               </div>

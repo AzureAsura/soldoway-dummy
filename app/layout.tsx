@@ -39,6 +39,11 @@ export const metadata: Metadata = {
     description: "B2B sales reward system powered by Solana smart contracts.",
     type: "website",
   },
+  icons: {
+    icon: "/icon.svg",
+    shortcut: "/icon.svg",
+    apple: "/icon.svg",
+  },
 };
 
 export default function RootLayout({
