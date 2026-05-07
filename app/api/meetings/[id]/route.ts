@@ -51,7 +51,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
 
     if (status === "REJECTED") {
       let calCancelled = false;
-      const dbUpdatedData: any = { status: "REJECTED" };
+      const dbUpdatedData: { status: "REJECTED"; calendar_event_id?: string | null } = { status: "REJECTED" };
 
       if (meeting.calendar_event_id) {
         try {

@@ -1,5 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import {
+  Connection,
+  Keypair,
+  PublicKey,
+  SystemProgram,
+  Transaction,
+  sendAndConfirmTransaction,
+} from "@solana/web3.js";
 
 // POST /api/claim — Sales triggers claim() on-chain
 // Collects all APPROVED meetings that haven't been paid yet (PENDING payouts)
@@ -40,22 +48,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Server wallet not configured" }, { status: 500 });
     }
 
-    const {
-      Connection,
-      Keypair,
-      PublicKey,
-      SystemProgram,
-      Transaction,
-      sendAndConfirmTransaction,
-    } = require("@solana/web3.js");
-
     const secretKey = Uint8Array.from(JSON.parse(serverWalletKey));
     const serverKeypair = Keypair.fromSecretKey(secretKey);
     const rpcUrl =
       process.env.NEXT_PUBLIC_SOLANA_RPC_URL || "https://api.devnet.solana.com";
     const connection = new Connection(rpcUrl, "confirmed");
 
-    let salesPubkey: typeof PublicKey;
+    let salesPubkey: PublicKey;
     try {
       salesPubkey = new PublicKey(salesUser.wallet_address);
     } catch {

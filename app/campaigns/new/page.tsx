@@ -10,6 +10,15 @@ import { useWalletBalance } from "@/hooks/use-wallet-balance";
 import bs58 from "bs58";
 import { SidebarLayout } from "@/app/components/sidebar-layout";
 
+type PrivyWalletLike = { walletClientType?: string; wallet?: { name?: string } };
+type PhantomProvider = {
+  isPhantom?: boolean;
+  isConnected?: boolean;
+  connect: () => Promise<void>;
+  signTransaction: (tx: import("@solana/web3.js").VersionedTransaction) => Promise<import("@solana/web3.js").VersionedTransaction>;
+};
+type WindowWithPhantom = Window & { phantom?: { solana?: PhantomProvider }; solana?: PhantomProvider };
+
 const CATEGORIES = [
   "DeFi", "NFT", "AI", "CEX", "DEX", "Infra", "Security",
 ];
@@ -85,7 +94,7 @@ export default function NewCampaignPage() {
 
           // Prefer Phantom external wallet; wallets[0] is Privy embedded which fails
           const phantomWallet = wallets.find(
-            (w) => (w as any).walletClientType === "phantom" || (w as any).wallet?.name?.toLowerCase?.().includes("phantom")
+            (w) => (w as PrivyWalletLike).walletClientType === "phantom" || (w as PrivyWalletLike).wallet?.name?.toLowerCase?.().includes("phantom")
           );
           const wallet = phantomWallet ?? wallets[0];
 
@@ -107,7 +116,7 @@ export default function NewCampaignPage() {
           // IMPORTANT: use signTransaction (not signAndSendTransaction) so WE control
           // which RPC endpoint sends the tx — Phantom may be on mainnet which would
           // reject a devnet blockhash and throw "Unexpected error".
-          const phantomProvider = (window as any).phantom?.solana ?? (window as any).solana;
+          const phantomProvider = (window as WindowWithPhantom).phantom?.solana ?? (window as WindowWithPhantom).solana;
           if (phantomProvider?.isPhantom) {
             if (!phantomProvider.isConnected) await phantomProvider.connect();
             // Phantom signs only — no network send yet
@@ -135,9 +144,10 @@ export default function NewCampaignPage() {
 
           console.log("Transaction result signature:", txSignature);
           await connection.confirmTransaction(txSignature, "confirmed");
-        } catch (txErr: any) {
+        } catch (txErr: unknown) {
           console.error("Full transaction error:", txErr);
-          throw new Error("On-chain deposit failed: " + (txErr.message || "Unknown error"));
+          const msg = txErr instanceof Error ? txErr.message : "Unknown error";
+          throw new Error("On-chain deposit failed: " + msg);
         }
       } else {
         toast.info("No active wallet connection found. Using mock transaction.");

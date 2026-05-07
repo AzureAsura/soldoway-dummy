@@ -66,8 +66,8 @@ export default function NewTaskPage() {
       toast.success("Task created and SOL deposited to escrow!");
       router.push("/dashboard/business");
       router.refresh();
-    } catch (err: any) {
-      toast.error(err.message || "Something went wrong");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Something went wrong");
     } finally {
       setIsSubmitting(false);
     }

@@ -1,28 +1,24 @@
 "use client";
 
 import { FloatingLogo } from "@/components/FloatingLogo";
+import { SoldowayCycle } from "@/components/SoldowayCycle";
 import { usePrivy } from "@privy-io/react-auth";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 export default function HomeClient() {
   const { ready, authenticated, login, user } = usePrivy();
   const router = useRouter();
-  const [role, setRole] = useState<string | null>(null);
 
-  // Fetch role once authenticated
-  useEffect(() => {
-    if (!authenticated || !user?.id) {
-      setRole(null);
-      return;
-    }
-    fetch(`/api/users/me?id=${encodeURIComponent(user.id)}`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (data?.role) setRole(data.role);
-      })
-      .catch(() => { });
-  }, [authenticated, user?.id]);
+  const { data: roleData } = useQuery({
+    queryKey: ["user-role", user?.id],
+    queryFn: async () => {
+      const r = await fetch(`/api/users/me?id=${encodeURIComponent(user!.id)}`);
+      return r.ok ? r.json() : null;
+    },
+    enabled: Boolean(authenticated && user?.id),
+  });
+  const role: string | null = roleData?.role ?? null;
 
   function handleGetStarted() {
     if (!authenticated) {
@@ -122,58 +118,8 @@ export default function HomeClient() {
         </div>
       </section>
 
-      <section className="px-6 py-20 bg-gray-50 border-y border-gray-200">
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">The Efficiency Gap</h2>
-            <p className="text-gray-500 max-w-2xl mx-auto text-lg">Why the traditional sales reward model is broken, and how Soldoway fixes it.</p>
-          </div>
-          <div className="grid md:grid-cols-2 gap-8">
-            <div className="bg-white p-8 md:p-10 rounded-2xl border border-gray-200 shadow-sm">
-              <h3 className="text-xl font-bold text-gray-400 mb-6 uppercase tracking-wider">Traditional</h3>
-              <ul className="space-y-5 text-gray-600">
-                <li className="flex items-start gap-4">
-                  <span className="text-red-500 text-xl leading-none">✕</span>
-                  <span className="leading-snug">Manual and slow payout processing</span>
-                </li>
-                <li className="flex items-start gap-4">
-                  <span className="text-red-500 text-xl leading-none">✕</span>
-                  <span className="leading-snug">Lack of transparency in reward calculation</span>
-                </li>
-                <li className="flex items-start gap-4">
-                  <span className="text-red-500 text-xl leading-none">✕</span>
-                  <span className="leading-snug">Prone to manipulation and disputes</span>
-                </li>
-                <li className="flex items-start gap-4">
-                  <span className="text-red-500 text-xl leading-none">✕</span>
-                  <span className="leading-snug">Idle budget sits in bank accounts doing nothing</span>
-                </li>
-              </ul>
-            </div>
-            <div className="bg-black text-white p-8 md:p-10 rounded-2xl shadow-xl">
-              <h3 className="text-xl font-bold text-gray-400 mb-6 uppercase tracking-wider">Soldoway</h3>
-              <ul className="space-y-5 text-gray-300">
-                <li className="flex items-start gap-4">
-                  <span className="text-green-400 text-xl leading-none">✓</span>
-                  <span className="text-white font-medium leading-snug">Automated, instant on-chain payouts</span>
-                </li>
-                <li className="flex items-start gap-4">
-                  <span className="text-green-400 text-xl leading-none">✓</span>
-                  <span className="text-white font-medium leading-snug">100% transparent smart contract logic</span>
-                </li>
-                <li className="flex items-start gap-4">
-                  <span className="text-green-400 text-xl leading-none">✓</span>
-                  <span className="text-white font-medium leading-snug">Trustless execution via escrow</span>
-                </li>
-                <li className="flex items-start gap-4">
-                  <span className="text-green-400 text-xl leading-none">✓</span>
-                  <span className="text-white font-medium leading-snug">Idle funds generate yield automatically</span>
-                </li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </section>
+      <SoldowayCycle/>
+
 
       {/* How It Works */}
       <section className="px-6 py-24 max-w-5xl mx-auto">

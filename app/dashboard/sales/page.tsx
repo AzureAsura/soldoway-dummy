@@ -220,7 +220,7 @@ export default function SalesDashboardPage() {
                     </div>
                     <div className="text-sm text-gray-500 flex items-center flex-wrap gap-2 mb-3">
                       <span className="font-semibold text-gray-900">
-                        {(m.campaign as any)?.title}
+                        {m.campaign?.title}
                       </span>
                       <span className="text-gray-300">•</span>
                       <span>{m.prospect_contact}</span>
@@ -261,7 +261,7 @@ export default function SalesDashboardPage() {
                     {m.status === "APPROVED" && (
                       <div className="text-right">
                         <div className="text-lg font-bold text-green-600 mb-1">
-                          +{m.payout?.amount ?? (m.campaign as any)?.reward_per_meeting} SOL
+                          +{m.payout?.amount ?? m.campaign?.reward_per_meeting} SOL
                         </div>
                         {m.payout?.tx_signature && m.payout.status === "SUCCESS" && (
                           <a

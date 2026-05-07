@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
 import { useAppStore } from "@/stores/app-store";
@@ -14,9 +14,11 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   const { isOnboarded, setUser, setRole, setWalletAddress, setOnboarded, reset } =
     useAppStore();
 
-  // Track if we've fetched from DB for this session to avoid loops
-  const hasFetched = useRef(false);
+  // hasFetchedRef: mutated inside effects (fine for refs).
+  // fetchComplete: set only in the async .finally() callback — never sync in an effect body.
+  const hasFetchedRef = useRef(false);
   const fetchingRef = useRef(false);
+  const [fetchComplete, setFetchComplete] = useState(false);
 
   // ── Step 1: Sync Privy user with DB ────────────────────────────────────────
   useEffect(() => {
@@ -24,20 +26,21 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 
     if (!authenticated) {
       reset();
-      hasFetched.current = false;
+      hasFetchedRef.current = false;
       return;
     }
 
     if (!privyUser?.id) return;
-    if (hasFetched.current || fetchingRef.current) return;
+    if (hasFetchedRef.current || fetchingRef.current) return;
 
     // Sync wallet address from Privy into Zustand immediately
     const walletAddr = privyUser.wallet?.address ?? null;
     if (walletAddr) setWalletAddress(walletAddr);
 
-    // If already onboarded (persisted in localStorage), skip DB fetch
+    // If already onboarded (persisted in localStorage), skip DB fetch.
+    // The spinner condition uses !isOnboarded so it won't show — no setState needed here.
     if (isOnboarded) {
-      hasFetched.current = true;
+      hasFetchedRef.current = true;
       return;
     }
 
@@ -56,15 +59,16 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
       })
       .catch((e) => console.error("[AuthGuard] fetch user failed:", e))
       .finally(() => {
-        hasFetched.current = true;
+        hasFetchedRef.current = true;
         fetchingRef.current = false;
+        setFetchComplete(true); // async callback — not a synchronous setState in the effect body
       });
   }, [ready, authenticated, privyUser?.id]);
 
   // ── Step 2: Route Guard ─────────────────────────────────────────────────────
   useEffect(() => {
     if (!ready) return;
-    if (!authenticated && !hasFetched.current && !isOnboarded) {
+    if (!authenticated && !fetchComplete && !isOnboarded) {
       // Still loading – don't redirect yet
       if (authenticated) return;
     }
@@ -84,7 +88,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    if (authenticated && !isOnboarded && hasFetched.current) {
+    if (authenticated && !isOnboarded && fetchComplete) {
       router.replace("/onboarding");
       return;
     }
@@ -97,7 +101,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     pathname?.startsWith("/campaigns") ||
     pathname?.startsWith("/meetings");
 
-  if (isProtected && (!ready || (authenticated && !hasFetched.current && !isOnboarded))) {
+  if (isProtected && (!ready || (authenticated && !fetchComplete && !isOnboarded))) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">

@@ -111,7 +111,7 @@ export default function ReferralPage() {
               <div className="mt-10 border-t border-gray-100 pt-6">
                 <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-widest mb-4">Referred Users</h3>
                 <div className="flex flex-wrap gap-2">
-                  {referralData.referred_users.map((ru: any) => (
+                  {referralData.referred_users.map((ru: { id: string; wallet_address: string }) => (
                     <span
                       key={ru.id}
                       className="text-xs bg-gray-50 border border-gray-200 px-3 py-1.5 rounded-md font-mono text-gray-700"

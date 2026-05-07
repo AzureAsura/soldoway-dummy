@@ -1,5 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import {
+  Connection,
+  Keypair,
+  PublicKey,
+  SystemProgram,
+  Transaction,
+  sendAndConfirmTransaction,
+} from "@solana/web3.js";
 
 const MOCK_APY = 0.05; // 5% APY as per spec
 
@@ -67,22 +75,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const {
-      Connection,
-      Keypair,
-      PublicKey,
-      SystemProgram,
-      Transaction,
-      sendAndConfirmTransaction,
-    } = require("@solana/web3.js");
-
     const secretKey = Uint8Array.from(JSON.parse(serverWalletKey));
     const serverKeypair = Keypair.fromSecretKey(secretKey);
     const rpcUrl =
       process.env.NEXT_PUBLIC_SOLANA_RPC_URL || "https://api.devnet.solana.com";
     const connection = new Connection(rpcUrl, "confirmed");
 
-    let businessPubkey: typeof PublicKey;
+    let businessPubkey: PublicKey;
     try {
       businessPubkey = new PublicKey(campaign.business.wallet_address);
     } catch {

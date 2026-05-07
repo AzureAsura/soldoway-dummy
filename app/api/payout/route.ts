@@ -1,5 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
+import {
+  Connection,
+  Keypair,
+  PublicKey,
+  SystemProgram,
+  Transaction,
+  sendAndConfirmTransaction,
+} from "@solana/web3.js";
 
 // POST /api/payout
 // Business triggers approvePayout() on-chain after approving a meeting.
@@ -86,22 +95,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Server wallet not configured" }, { status: 500 });
     }
 
-    const {
-      Connection,
-      Keypair,
-      PublicKey,
-      SystemProgram,
-      Transaction,
-      sendAndConfirmTransaction,
-    } = require("@solana/web3.js");
-
     const secretKey = Uint8Array.from(JSON.parse(serverWalletKey));
     const serverKeypair = Keypair.fromSecretKey(secretKey);
     const rpcUrl =
       process.env.NEXT_PUBLIC_SOLANA_RPC_URL || "https://api.devnet.solana.com";
     const connection = new Connection(rpcUrl, "confirmed");
 
-    let salesPubkey: typeof PublicKey;
+    let salesPubkey: PublicKey;
     try {
       salesPubkey = new PublicKey(salesUser.wallet_address);
     } catch {
@@ -174,7 +174,7 @@ export async function POST(req: NextRequest) {
       newMeetingsUsed >= campaign.meeting_capacity ? "CLOSED" : "ACTIVE";
 
     // Build transaction operations
-    const operations = [];
+    const operations: Prisma.PrismaPromise<unknown>[] = [];
 
     // 4.1 Update meeting status to APPROVED
     operations.push(
@@ -233,7 +233,7 @@ export async function POST(req: NextRequest) {
       })
     );
 
-    const txResults = await prisma.$transaction(operations as any);
+    const txResults = await prisma.$transaction(operations);
 
     // txResults[1] is always the payout operation based on how we built the array
     const payout = txResults[1];

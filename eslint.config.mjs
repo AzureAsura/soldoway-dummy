@@ -12,6 +12,14 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Root-level dev/debug scripts — CommonJS by design, not part of the app
+    "airdrop.js",
+    "check_balance.js",
+    "empty-module.js",
+    "test-privy.js",
+    "test-privy-sign.js",
+    "test-privy-types.js",
+    "test-types.js",
   ]),
 ]);
 
