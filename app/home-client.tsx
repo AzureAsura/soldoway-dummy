@@ -14,18 +14,25 @@ import FAQ from "@/components/FAQ";
 import Core from "@/components/Core";
 import { LiveYieldCounter } from "@/components/LiveYieldCounter";
 
-function FooterColumn({ title, links }: { title: string; links: string[] }) {
+type FooterLink = {
+  label: string;
+  url: string;
+};
+
+function FooterColumn({ title, links }: { title: string; links: FooterLink[] }) {
   return (
     <div>
       <p className="font-heading font-semibold text-sm text-white/80 mb-4">{title}</p>
       <ul className="space-y-2.5">
         {links.map((link) => (
-          <li key={link}>
+          <li key={link.label}>
             <a
-              href="#"
+              href={link.url}
+              target="_blank" // Opsional: buka di tab baru untuk link sosmed
+              rel="noopener noreferrer" // Keamanan saat pakai target="_blank"
               className="font-body text-sm text-white/40 hover:text-white/80 transition-colors duration-150"
             >
-              {link}
+              {link.label}
             </a>
           </li>
         ))}
@@ -141,19 +148,36 @@ export default function HomeClient() {
       <FAQ />
 
 
-      {/* ── Footer ────────────────────────────────────────────────────────── */}
       <footer className="bg-surface-dark text-white border-t border-white/10">
-        <div className="max-w-6xl mx-auto px-6 py-16 grid grid-cols-2 md:grid-cols-4 gap-10">
+        <div className="max-w-6xl mx-auto px-6 py-16 grid grid-cols-2 md:grid-cols-3 gap-10">
+
+          {/* Kolom 1: Branding */}
           <div className="col-span-2 md:col-span-1">
             <span className="font-heading font-bold text-xl">Soldoway</span>
             <p className="font-body text-white/50 text-sm mt-3 leading-relaxed max-w-[200px]">
               Sales rewards, on-chain. Powered by Solana.
             </p>
           </div>
-          <FooterColumn title="Product" links={["How It Works", "Features", "Infrastructure"]} />
-          <FooterColumn title="Connect" links={["Instagram", "TikTok", "LinkedIn"]} />
-          <FooterColumn title="Talk" links={["WhatsApp", "Email Us"]} />
+
+          <FooterColumn
+            title="Product"
+            links={[
+              { label: "How It Works", url: "/" },
+              { label: "Features", url: "/" },
+              { label: "Infrastructure", url: "/" }
+            ]}
+          />
+
+          <FooterColumn
+            title="Connect"
+            links={[
+              { label: "Twitter / X", url: "https://x.com/soldoway_sales" },
+              { label: "GitHub", url: "https://github.com/wayphantomme/soldoway-v2" },
+            ]}
+          />
+
         </div>
+
         <div className="border-t border-white/10 py-5 px-6 text-center font-body text-white/30 text-xs">
           © {new Date().getFullYear()} Soldoway Platform. All Rights Reserved.
         </div>

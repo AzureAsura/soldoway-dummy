@@ -47,10 +47,9 @@ const features: FeatureCard[] = [
 export function FeatureCarousel() {
   return (
     <section className="bg-white text-black py-24 md:py-32 overflow-hidden">
-      <div className="max-w-[90rem] mx-auto px-6">
+      <div className="max-w-7xl mx-auto px-6">
         <div className="flex flex-col lg:flex-row gap-12 lg:gap-20 items-start">
           
-          {/* Left Column - Tight Typography */}
           <div className="w-full lg:w-[35%] shrink-0 lg:sticky lg:top-32">
             <motion.h2 
               initial={{ opacity: 0, x: -20 }}
