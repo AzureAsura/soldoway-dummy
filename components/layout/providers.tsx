@@ -59,9 +59,9 @@ export function Providers({ children }: PropsWithChildren) {
               },
             },
           },
-          loginMethods: ["email", "google", "wallet"],
+          loginMethods: ["wallet"],
           appearance: {
-            theme: "dark",
+            theme: "light",
             accentColor: "#7c3aed",
             walletList: ["phantom", "solflare"],
           },

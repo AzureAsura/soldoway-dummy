@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ClientOnly } from "@/app/components/client-only";
+import { ClientOnly } from "@/components/layout/client-only";
 
 export default function ReferralPage() {
   const router = useRouter();

@@ -9,11 +9,15 @@ import {
   Transaction,
   sendAndConfirmTransaction,
 } from "@solana/web3.js";
+import { computePayoutSplit } from "@/lib/fees";
 
 // POST /api/payout
 // Business triggers approvePayout() on-chain after approving a meeting.
+// Platform fee (5% by default) is deducted from every reward:
+//   - If the rep was referred: referrer gets 20% of the fee (≈1%), platform keeps 80% (≈4%)
+//   - If the rep has no referrer: platform keeps the full 5%
 // Validations per spec:
-//  1. Meeting status must be APPROVED
+//  1. Meeting status must be PENDING
 //  2. Campaign status must be ACTIVE
 //  3. budget_used + reward_per_meeting <= budget_total
 //  4. No successful payout already exists for this meeting
@@ -89,7 +93,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Sales user not found" }, { status: 404 });
     }
 
-    // 3. Execute on-chain approvePayout() via server wallet
+    // 3. Compute fee split — platform takes PLATFORM_FEE_RATE on every payout
+    const { salesAmount, referrerCut, platformCut } = computePayoutSplit(
+      amount,
+      !!salesUser.referrer
+    );
+
+    // 4. Execute on-chain transfers via server wallet
     const serverWalletKey = process.env.SERVER_WALLET_PRIVATE_KEY;
     if (!serverWalletKey) {
       return NextResponse.json({ error: "Server wallet not configured" }, { status: 500 });
@@ -111,43 +121,61 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    let salesAmount = amount;
-    let referrerBonus = 0;
+    // Solana minimum rent-exempt balance for a system account (~0.00089 SOL)
+    const RENT_EXEMPT_MIN = 890880; // lamports
 
     const tx = new Transaction();
 
-    // Calculate referral split
-    if (salesUser.referrer) {
-      const platformFee = amount * 0.02;
-      referrerBonus = platformFee * 0.5;
-      salesAmount = amount - platformFee;
-
-      const platformWallet = process.env.PLATFORM_WALLET_ADDRESS;
-      if (platformWallet) {
+    // Platform cut — send on-chain only if destination won't fall below rent-exempt minimum
+    const platformWallet = process.env.PLATFORM_WALLET_ADDRESS;
+    if (platformWallet && platformCut > 0) {
+      const platformPubkey = new PublicKey(platformWallet);
+      const platformBalance = await connection.getBalance(platformPubkey);
+      const platformCutLamports = Math.floor(platformCut * 1e9);
+      if (platformBalance + platformCutLamports >= RENT_EXEMPT_MIN) {
         tx.add(
           SystemProgram.transfer({
             fromPubkey: serverKeypair.publicKey,
-            toPubkey: new PublicKey(platformWallet),
-            lamports: Math.floor(referrerBonus * 1e9),
+            toPubkey: platformPubkey,
+            lamports: platformCutLamports,
+          })
+        );
+      } else {
+        console.log(
+          `[approvePayout] Skipping on-chain platform transfer: ` +
+          `${platformCut} SOL would leave platform wallet below rent-exempt minimum. ` +
+          `Recorded in PlatformRevenue DB only.`
+        );
+      }
+    }
+
+    // Referrer cut — same rent-exempt check
+    if (salesUser.referrer && referrerCut > 0) {
+      const referrerPubkey = new PublicKey(salesUser.referrer.wallet_address);
+      const referrerBalance = await connection.getBalance(referrerPubkey);
+      const referrerCutLamports = Math.floor(referrerCut * 1e9);
+      if (referrerBalance + referrerCutLamports >= RENT_EXEMPT_MIN) {
+        tx.add(
+          SystemProgram.transfer({
+            fromPubkey: serverKeypair.publicKey,
+            toPubkey: referrerPubkey,
+            lamports: referrerCutLamports,
           })
         );
       }
-
-      tx.add(
-        SystemProgram.transfer({
-          fromPubkey: serverKeypair.publicKey,
-          toPubkey: new PublicKey(salesUser.referrer.wallet_address),
-          lamports: Math.floor(referrerBonus * 1e9),
-        })
-      );
     }
 
-    // Add transfer to sales rep
+    // Sales rep receives their net reward — bump to rent-exempt minimum if needed
+    const salesBalance = await connection.getBalance(salesPubkey);
+    const salesLamports = Math.floor(salesAmount * 1e9);
+    const finalSalesLamports = salesBalance + salesLamports < RENT_EXEMPT_MIN
+      ? RENT_EXEMPT_MIN - salesBalance  // top up to minimum so tx doesn't fail
+      : salesLamports;
     tx.add(
       SystemProgram.transfer({
         fromPubkey: serverKeypair.publicKey,
         toPubkey: salesPubkey,
-        lamports: Math.floor(salesAmount * 1e9),
+        lamports: finalSalesLamports,
       })
     );
 
@@ -157,7 +185,10 @@ export async function POST(req: NextRequest) {
       tx.recentBlockhash = blockhash;
       tx.feePayer = serverKeypair.publicKey;
 
-      console.log(`[approvePayout] Sending ${salesAmount} SOL to ${salesPubkey.toBase58()}`);
+      console.log(
+        `[approvePayout] Sending ${salesAmount} SOL to ${salesPubkey.toBase58()} ` +
+        `(platform: ${platformCut} SOL, referrer: ${referrerCut} SOL)`
+      );
       signature = await sendAndConfirmTransaction(connection, tx, [serverKeypair]);
       console.log(`[approvePayout] Transaction successful: ${signature}`);
     } catch (txErr: unknown) {
@@ -168,15 +199,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 4. Record payout and update campaign budget + meetings_used atomically
+    // 5. Record payout and update campaign budget + meetings_used atomically
     const newMeetingsUsed = campaign.meetings_used + 1;
     const newStatus =
       newMeetingsUsed >= campaign.meeting_capacity ? "CLOSED" : "ACTIVE";
 
-    // Build transaction operations
     const operations: Prisma.PrismaPromise<unknown>[] = [];
 
-    // 4.1 Update meeting status to APPROVED
+    // 5.1 Update meeting status to APPROVED
     operations.push(
       prisma.meeting.update({
         where: { id: meeting_id },
@@ -184,7 +214,7 @@ export async function POST(req: NextRequest) {
       })
     );
 
-    // 4.2 Create or update payout record
+    // 5.2 Create or update payout record (amount = net received by rep)
     if (meeting.payout) {
       operations.push(
         prisma.payout.update({
@@ -198,7 +228,7 @@ export async function POST(req: NextRequest) {
           data: {
             meeting_id,
             sales_id: meeting.sales_id,
-            amount: salesAmount, // Record actual amount received by sales
+            amount: salesAmount, // Net amount received by the sales rep
             tx_signature: signature,
             status: "SUCCESS",
           },
@@ -206,27 +236,41 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 4.3 Create referral reward record if applicable
-    if (salesUser.referrer && referrerBonus > 0) {
+    // 5.3 Record referral reward if applicable
+    if (salesUser.referrer && referrerCut > 0) {
       operations.push(
         prisma.referralReward.create({
           data: {
             referrer_id: salesUser.referrer.id,
             referred_id: salesUser.id,
             meeting_id,
-            amount: referrerBonus,
+            amount: referrerCut,
             tx_signature: signature,
           }
         })
       );
     }
 
-    // 4.4 Update campaign budget_used, meetings_used, and status
+    // 5.4 Record platform revenue
+    if (platformCut > 0) {
+      operations.push(
+        prisma.platformRevenue.create({
+          data: {
+            meeting_id,
+            amount: platformCut,
+            tx_signature: signature,
+          }
+        })
+      );
+    }
+
+    // 5.5 Update campaign budget_used, meetings_used, and status
+    // budget_used tracks full reward (not net) so budget math stays correct
     operations.push(
       prisma.campaign.update({
         where: { id: campaign.id },
         data: {
-          budget_used: { increment: amount }, // Budget used is the full reward
+          budget_used: { increment: amount },
           meetings_used: { increment: 1 },
           status: newStatus,
         },
@@ -235,7 +279,8 @@ export async function POST(req: NextRequest) {
 
     const txResults = await prisma.$transaction(operations);
 
-    // txResults[1] is always the payout operation based on how we built the array
+    // txResults[1] is always the payout operation (index stable as long as
+    // meeting.update is index 0 and payout create/update is index 1)
     const payout = txResults[1];
 
     return NextResponse.json(

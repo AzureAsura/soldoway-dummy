@@ -6,8 +6,10 @@ import { usePrivy } from "@privy-io/react-auth";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useCampaign } from "@/hooks/use-campaigns";
-import { ClientOnly } from "@/app/components/client-only";
-import { SidebarLayout } from "@/app/components/sidebar-layout";
+import { ClientOnly } from "@/components/layout/client-only";
+import { SidebarLayout } from "@/components/layout/sidebar-layout";
+import Link from "next/link";
+import { ShieldCheck, Paperclip, Info, ChevronRight } from "lucide-react";
 
 export default function TaskDetailPage() {
   const { id } = useParams() as { id: string };
@@ -44,9 +46,6 @@ export default function TaskDetailPage() {
     setIsSubmitting(true);
     const toastId = toast.loading("Submitting meeting…");
     try {
-      // Convert the local datetime-local value (no TZ) to a proper UTC ISO string
-      // using the browser's own locale so the user's timezone (e.g. WIB +08:00) is
-      // applied exactly once — the API must NOT re-convert it.
       const scheduledAtUTC = new Date(form.scheduled_at).toISOString();
 
       const res = await fetch("/api/meetings", {
@@ -57,7 +56,7 @@ export default function TaskDetailPage() {
           salesId: user.id,
           prospect_name: form.prospect_name,
           prospect_contact: form.prospect_contact,
-          scheduled_at: scheduledAtUTC, // already ISO 8601 UTC — no further conversion needed
+          scheduled_at: scheduledAtUTC,
           notes: form.notes || undefined,
         }),
       });
@@ -68,12 +67,10 @@ export default function TaskDetailPage() {
       }
 
       if (data.cal_error) {
-        // Meeting IS saved to DB — dismiss the loading toast with success
         toast.success("Meeting submitted!", {
           id: toastId,
           description: "Your meeting has been saved and is waiting for Business approval.",
         });
-        // Separately warn that Cal.com booking failed (non-blocking)
         toast.error("Cal.com booking unavailable", {
           description: "This time slot is not available. Please choose a different date or time for the meeting.",
         });
@@ -100,169 +97,291 @@ export default function TaskDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-brand border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
-  if (!campaign) return <div className="p-8 text-center">Campaign not found.</div>;
-
-  const remaining = campaign.meeting_capacity - campaign.meetings_used;
-  const isFull = remaining <= 0;
-
-  return (
-    <SidebarLayout role="SALES">
-      <div className="max-w-5xl mx-auto p-4 md:p-8 animate-fade-in">
-        <div className="grid md:grid-cols-5 gap-10">
-          {/* Campaign Info — left panel */}
-          <div className="md:col-span-2">
-            <div className="bg-white border border-gray-200 rounded-xl p-6 md:p-8 shadow-sm sticky top-24">
-              <div className="mb-4">
-                <span className="text-xs bg-gray-50 border border-gray-200 text-gray-600 px-2.5 py-1 rounded-md font-medium">
-                  {campaign.category}
-                </span>
-              </div>
-              <h1 className="text-2xl font-bold text-black mb-1">{campaign.title}</h1>
-              <p className="text-sm text-gray-500 mb-6">{campaign.company}</p>
-
-              {campaign.description && (
-                <div className="text-sm text-gray-600 leading-relaxed mb-6 bg-gray-50 border border-gray-100 p-4 rounded-lg">
-                  {campaign.description}
-                </div>
-              )}
-
-              <div className="space-y-4">
-                <div className="flex justify-between items-center border-b border-gray-100 pb-3">
-                  <span className="text-sm font-semibold text-gray-500 uppercase tracking-widest">Reward</span>
-                  <span className="text-lg font-bold text-black">
-                    {campaign.reward_per_meeting} SOL
-                  </span>
-                </div>
-                <div className="flex justify-between items-center border-b border-gray-100 pb-3">
-                  <span className="text-sm font-semibold text-gray-500 uppercase tracking-widest">Slots Left</span>
-                  <span className={`text-sm font-bold ${isFull ? "text-red-600" : "text-green-600"}`}>
-                    {isFull ? "Full" : `${remaining} remaining`}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center border-b border-gray-100 pb-3">
-                  <span className="text-sm font-semibold text-gray-500 uppercase tracking-widest">Budget Left</span>
-                  <span className="text-sm font-bold text-black">
-                    {(campaign.budget_total - campaign.budget_used).toFixed(2)} SOL
-                  </span>
+      <SidebarLayout role="SALES">
+        <div className="bg-[#f9f9f9] min-h-full">
+          <div className="max-w-5xl mx-auto px-6 py-16 animate-pulse">
+            <div className="mb-10 flex items-center gap-2">
+              <div className="h-4 w-24 bg-[#e0e0e0] rounded-[5px]" />
+              <div className="h-4 w-4 bg-[#e0e0e0] rounded-full" />
+              <div className="h-4 w-32 bg-[#e0e0e0] rounded-[5px]" />
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-16">
+              <div className="lg:col-span-2 space-y-6">
+                <div className="bg-white border-2 border-black rounded-[5px] shadow-[4px_4px_0px_0px_#000] p-6 space-y-4">
+                  <div className="h-6 w-24 bg-[#e0e0e0] rounded-full" />
+                  <div className="h-6 w-3/4 bg-[#e0e0e0] rounded-[5px]" />
+                  <div className="h-4 w-1/2 bg-[#e0e0e0] rounded-[5px]" />
+                  <div className="h-20 w-full bg-[#e0e0e0] rounded-[5px]" />
+                  {[...Array(3)].map((_, i) => (
+                    <div key={i} className="flex justify-between py-3 border-b-2 border-black/10">
+                      <div className="h-3 w-16 bg-[#e0e0e0] rounded-[5px]" />
+                      <div className="h-4 w-20 bg-[#e0e0e0] rounded-[5px]" />
+                    </div>
+                  ))}
                 </div>
               </div>
-
-              {/* Capacity bar */}
-              <div className="mt-6">
-                <div className="flex justify-between text-xs font-semibold text-gray-500 mb-2">
-                  <span className="uppercase tracking-widest">Capacity</span>
-                  <span>{campaign.meetings_used}/{campaign.meeting_capacity}</span>
-                </div>
-                <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-black rounded-full transition-all duration-500"
-                    style={{
-                      width: `${Math.min((campaign.meetings_used / campaign.meeting_capacity) * 100, 100)}%`,
-                    }}
-                  />
+              <div className="lg:col-span-3 space-y-6">
+                <div className="bg-white border-2 border-black rounded-[5px] shadow-[4px_4px_0px_0px_#000] p-8 space-y-5">
+                  <div className="h-6 w-40 bg-[#e0e0e0] rounded-[5px]" />
+                  {[...Array(4)].map((_, i) => (
+                    <div key={i} className="space-y-2">
+                      <div className="h-3 w-24 bg-[#e0e0e0] rounded-[5px]" />
+                      <div className="h-12 w-full bg-[#e0e0e0] rounded-[5px]" />
+                    </div>
+                  ))}
+                  <div className="h-12 w-full bg-[#e0e0e0] rounded-[5px]" />
                 </div>
               </div>
             </div>
           </div>
+        </div>
+      </SidebarLayout>
+    );
+  }
 
-          {/* Submit Meeting Form — right panel */}
-          <div className="md:col-span-3">
-            <h2 className="text-3xl font-extrabold text-black tracking-tight mb-8">Submit Meeting</h2>
+  if (!campaign) {
+    return (
+      <SidebarLayout role="SALES">
+        <div className="p-8 text-center font-bold text-black">Campaign not found.</div>
+      </SidebarLayout>
+    );
+  }
 
-            {submitted ? (
-              <div className="bg-green-50 border border-green-200 rounded-xl p-10 text-center animate-fade-in flex flex-col items-center justify-center">
-                <div className="text-5xl mb-6">🎉</div>
-                <h3 className="text-2xl font-bold text-black mb-3">Meeting Submitted!</h3>
-                <p className="text-green-800 font-medium">
-                  Your meeting is pending approval. Once approved, your reward will be paid automatically.
-                </p>
-                <p className="text-sm text-green-600 mt-6 font-semibold">Redirecting to dashboard…</p>
+  const remaining = campaign.meeting_capacity - campaign.meetings_used;
+  const isFull = remaining <= 0;
+  const progress = campaign.meeting_capacity > 0
+    ? Math.min((campaign.meetings_used / campaign.meeting_capacity) * 100, 100)
+    : 0;
+
+  return (
+    <SidebarLayout role="SALES">
+      <div className="bg-[#f9f9f9] min-h-screen">
+        <div className="max-w-5xl mx-auto px-6 py-16 animate-fade-in">
+
+          {/* Breadcrumb */}
+          <div className="mb-10 flex items-center gap-2">
+            <Link href="/tasks" className="text-sm text-[#3d4948] font-medium hover:underline">
+              Campaigns
+            </Link>
+            <ChevronRight size={16} className="text-[#3d4948]" />
+            <span className="text-sm font-bold text-black">{campaign.title}</span>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-16 items-start">
+
+            {/* ── LEFT PANEL ── */}
+            <aside className="lg:col-span-2 lg:sticky lg:top-24 space-y-6">
+
+              {/* Main Info Card */}
+              <div className="bg-white border-2 border-black shadow-[4px_4px_0px_0px_#000] rounded-[15px] p-6">
+                <div className="mb-4">
+                  <span className="bg-[#006a65] px-3 py-1 border-2 border-black text-white text-[10px] font-bold uppercase tracking-wider rounded-full">
+                    {campaign.category}
+                  </span>
+                </div>
+                <h1 className="text-2xl font-bold text-black mb-1">{campaign.title}</h1>
+                <p className="text-sm text-[#5d5f5f] font-medium mb-6">{campaign.company}</p>
+
+                {campaign.description && (
+                  <div className="bg-[#6be1d9]/20 border-2 border-black rounded-[15px] p-4 mb-10">
+                    <p className="text-sm text-[#3d4948] leading-relaxed">{campaign.description}</p>
+                  </div>
+                )}
+
+                {/* Stats Rows */}
+                <div className="space-y-0">
+                  <div className="flex justify-between items-center py-4 border-b-2 border-black">
+                    <span className="text-[11px] font-bold uppercase tracking-widest text-[#3d4948]">Reward</span>
+                    <span className="text-xl font-bold text-[#006a65]">
+                      {campaign.reward_per_meeting} SOL
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center py-4 border-b-2 border-black">
+                    <span className="text-[11px] font-bold uppercase tracking-widest text-[#3d4948]">Slots Left</span>
+                    <div className={`px-2 py-0.5 border-2 border-black rounded-[15px] ${isFull ? "bg-[#FF4D50]/20" : "bg-[#00D6BD]/20"}`}>
+                      <span className="text-xl font-bold text-black">
+                        {isFull ? "Full" : remaining}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center py-4 border-b-2 border-black">
+                    <span className="text-[11px] font-bold uppercase tracking-widest text-[#3d4948]">Budget Left</span>
+                    <span className="text-xl font-bold text-black">
+                      {(campaign.budget_total - campaign.budget_used).toFixed(2)} SOL
+                    </span>
+                  </div>
+                </div>
+
+                {/* Capacity Progress */}
+                <div className="mt-6">
+                  <div className="flex justify-between mb-2">
+                    <span className="text-[11px] font-bold uppercase tracking-widest text-black">Campaign Capacity</span>
+                    <span className="text-[11px] font-bold text-black">
+                      {campaign.meetings_used} / {campaign.meeting_capacity}
+                    </span>
+                  </div>
+                  <div className="h-4 w-full bg-[#e0e0e0] border-2 border-black overflow-hidden">
+                    <div
+                      className="h-full bg-black transition-all duration-500"
+                      style={{ width: `${progress}%` }}
+                    />
+                  </div>
+                </div>
               </div>
-            ) : isFull ? (
-              <div className="bg-white border border-gray-200 rounded-xl p-10 text-center shadow-sm flex flex-col items-center justify-center">
-                <div className="text-5xl mb-6 text-gray-300">🔒</div>
-                <h3 className="text-2xl font-bold text-black mb-3">Campaign Full</h3>
-                <p className="text-gray-500">
-                  This campaign has reached its meeting capacity. Check other campaigns.
-                </p>
+
+              {/* Verified Campaign Card */}
+              <div className="bg-[#e2e2e2] border-2 border-dashed border-[#6d7a78] rounded-[15px] p-6">
+                <div className="flex gap-4 items-start">
+                  <ShieldCheck size={24} className="text-[#006a65] shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="text-[11px] font-bold uppercase tracking-widest mb-1">Verified Campaign</h4>
+                    <p className="text-xs text-[#3d4948] leading-relaxed">
+                      This campaign has an escrowed budget. Rewards are guaranteed upon successful verification.
+                    </p>
+                  </div>
+                </div>
               </div>
-            ) : (
-              <form
-                onSubmit={handleSubmit}
-                className="bg-white border border-gray-200 rounded-xl p-6 md:p-8 shadow-sm space-y-6"
-              >
-                <div>
-                  <label className="block text-sm font-bold text-black mb-2">
-                    Prospect Name <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    required
-                    type="text"
-                    className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-black focus:outline-none focus:ring-2 focus:ring-black focus:bg-white transition-all"
-                    placeholder="e.g., John Doe – Acme Corp"
-                    value={form.prospect_name}
-                    onChange={(e) => setForm((p) => ({ ...p, prospect_name: e.target.value }))}
-                  />
-                </div>
+            </aside>
 
-                <div>
-                  <label className="block text-sm font-bold text-black mb-2">
-                    Prospect Contact <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    required
-                    type="text"
-                    className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-black focus:outline-none focus:ring-2 focus:ring-black focus:bg-white transition-all"
-                    placeholder="Phone number or email address"
-                    value={form.prospect_contact}
-                    onChange={(e) => setForm((p) => ({ ...p, prospect_contact: e.target.value }))}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-bold text-black mb-2">
-                    Date & Time of Meeting <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    required
-                    type="datetime-local"
-                    className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-black focus:outline-none focus:ring-2 focus:ring-black focus:bg-white transition-all"
-                    value={form.scheduled_at}
-                    onChange={(e) => setForm((p) => ({ ...p, scheduled_at: e.target.value }))}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-bold text-black mb-2">
-                    Meeting Notes
-                  </label>
-                  <textarea
-                    className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-black min-h-[140px] focus:outline-none focus:ring-2 focus:ring-black focus:bg-white transition-all resize-none"
-                    placeholder="Briefly describe what happened during the meeting, the prospect's interest level, any follow-up agreed, etc."
-                    value={form.notes}
-                    onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))}
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  id="submit-meeting-btn"
-                  className="w-full bg-black hover:bg-gray-800 text-white font-bold py-4 rounded-lg transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed text-base mt-2"
-                >
-                  {isSubmitting ? "Submitting…" : `Submit Meeting → Earn ${campaign.reward_per_meeting} SOL`}
-                </button>
-
-                <p className="text-sm text-gray-500 text-center font-medium pt-2 border-t border-gray-100">
-                  After the Business approves your meeting, your reward will be paid to your wallet automatically.
+            {/* ── RIGHT PANEL ── */}
+            <section className="lg:col-span-3 space-y-6">
+              <header className="mb-6">
+                <h2 className="text-[32px] font-extrabold text-black tracking-tight leading-tight">
+                  Submit Meeting
+                </h2>
+                <p className="text-[#3d4948] font-medium mt-2">
+                  Record your successful demo or discovery call to claim your reward.
                 </p>
-              </form>
-            )}
+              </header>
+
+              {/* SUCCESS STATE */}
+              {submitted ? (
+                <div className="bg-[#6be1d9]/20 border-2 border-black shadow-[4px_4px_0px_0px_#000] rounded-[15px] p-10 text-center animate-fade-in flex flex-col items-center justify-center">
+                  <div className="text-5xl mb-6">🎉</div>
+                  <h3 className="text-2xl font-bold text-black mb-3">Meeting Submitted!</h3>
+                  <p className="text-[#006a65] font-medium">
+                    Your meeting is pending approval. Once approved, your reward will be paid automatically.
+                  </p>
+                  <p className="text-sm text-[#3d4948] mt-6 font-bold">Redirecting to dashboard…</p>
+                </div>
+
+              ) : isFull ? (
+                /* FULL STATE */
+                <div className="bg-white border-2 border-black shadow-[4px_4px_0px_0px_#000] rounded-[15px] p-10 text-center flex flex-col items-center justify-center">
+                  <div className="text-5xl mb-6 opacity-30">🔒</div>
+                  <h3 className="text-2xl font-bold text-black mb-3">Campaign Full</h3>
+                  <p className="text-[#5d5f5f] font-medium">
+                    This campaign has reached its meeting capacity. Check other campaigns.
+                  </p>
+                </div>
+
+              ) : (
+                /* FORM STATE */
+                <>
+                  <div className="bg-white border-2 border-black shadow-[4px_4px_0px_0px_#000] rounded-[15px] p-6 lg:p-10">
+                    <form onSubmit={handleSubmit} className="space-y-6">
+
+                      {/* Name + Contact grid */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <label className="block text-sm font-bold text-black uppercase tracking-widest">
+                            Prospect Name <span className="text-[#ba1a1a]">*</span>
+                          </label>
+                          <input
+                            required
+                            type="text"
+                            placeholder="e.g. Alex Johnson – Acme Corp"
+                            className="w-full px-4 py-4 border-2 border-black rounded-[15px] font-medium bg-white focus:outline-none focus:shadow-[4px_4px_0px_0px_#000] transition-all text-black"
+                            value={form.prospect_name}
+                            onChange={(e) => setForm((p) => ({ ...p, prospect_name: e.target.value }))}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="block text-sm font-bold text-black uppercase tracking-widest">
+                            Prospect Contact <span className="text-[#ba1a1a]">*</span>
+                          </label>
+                          <input
+                            required
+                            type="text"
+                            placeholder="Phone number or email"
+                            className="w-full px-4 py-4 border-2 border-black rounded-[15px] font-medium bg-white focus:outline-none focus:shadow-[4px_4px_0px_0px_#000] transition-all text-black"
+                            value={form.prospect_contact}
+                            onChange={(e) => setForm((p) => ({ ...p, prospect_contact: e.target.value }))}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Date & Time */}
+                      <div className="space-y-2">
+                        <label className="block text-sm font-bold text-black uppercase tracking-widest">
+                          Meeting Date &amp; Time <span className="text-[#ba1a1a]">*</span>
+                        </label>
+                        <input
+                          required
+                          type="datetime-local"
+                          className="w-full px-4 py-4 border-2 border-black rounded-[15px] font-medium bg-white focus:outline-none focus:shadow-[4px_4px_0px_0px_#000] transition-all text-black"
+                          value={form.scheduled_at}
+                          onChange={(e) => setForm((p) => ({ ...p, scheduled_at: e.target.value }))}
+                        />
+                      </div>
+
+                      {/* Notes */}
+                      <div className="space-y-2">
+                        <label className="block text-sm font-bold text-black uppercase tracking-widest">
+                          Meeting Notes
+                        </label>
+                        <textarea
+                          rows={4}
+                          placeholder="Summarize the key pain points and interest level..."
+                          className="w-full px-4 py-4 border-2 border-black rounded-[15px] font-medium bg-white focus:outline-none focus:shadow-[4px_4px_0px_0px_#000] transition-all text-black resize-none"
+                          value={form.notes}
+                          onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))}
+                        />
+                      </div>
+
+                      {/* Submit */}
+                      <div className="pt-2">
+                        <button
+                          type="submit"
+                          disabled={isSubmitting}
+                          id="submit-meeting-btn"
+                          className="w-full bg-[#1b1b1b] text-white font-bold py-5 px-10 border-2 border-black rounded-[15px] shadow-[4px_4px_0px_0px_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none active:translate-x-[4px] active:translate-y-[4px] transition-all disabled:opacity-50 disabled:cursor-not-allowed text-base flex items-center justify-center gap-3"
+                        >
+                          {isSubmitting
+                            ? "Submitting…"
+                            : `Submit Meeting → Earn ${campaign.reward_per_meeting} SOL`}
+                        </button>
+                      </div>
+
+                      {/* Footer note */}
+                      <div className="pt-6 border-t-2 border-black">
+                        <div className="flex items-center gap-2 text-[#3d4948]">
+                          <Info size={18} className="shrink-0" />
+                          <p className="text-xs font-medium">
+                            Rewards are distributed after meeting verification. Once approved, your reward is paid to your wallet automatically.
+                          </p>
+                        </div>
+                      </div>
+                    </form>
+                  </div>
+
+                  {/* Proof of Work Card */}
+                  <div className="bg-[#81f5ed] border-2 border-black shadow-[4px_4px_0px_0px_#000] rounded-[15px] p-6">
+                    <div className="flex gap-6 items-center">
+                      <div className="bg-white border-2 border-black rounded-full p-2 shrink-0">
+                        <Paperclip size={20} className="text-[#006a65]" />
+                      </div>
+                      <div>
+                        <h4 className="text-xl font-bold text-black">Attach Proof of Meeting</h4>
+                        <p className="text-sm font-medium text-[#00504c] mt-1">
+                          Optional: Share a screenshot of the calendar invite or a recording link for faster approval.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+            </section>
           </div>
         </div>
       </div>

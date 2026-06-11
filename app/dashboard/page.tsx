@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { toast } from "sonner";
 
-import { ClientOnly } from "@/app/components/client-only";
+import { ClientOnly } from "@/components/layout/client-only";
 
 // Dashboard redirects to role-specific page after auth check
 export default function DashboardPage() {

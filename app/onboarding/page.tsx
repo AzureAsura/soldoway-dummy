@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { useAppStore } from "@/stores/app-store";
 import type { Role } from "@/types";
 
-import { ClientOnly } from "@/app/components/client-only";
+import { ClientOnly } from "@/components/layout/client-only";
 
 const ROLES: { value: Role; label: string; desc: string; emoji: string }[] = [
   {

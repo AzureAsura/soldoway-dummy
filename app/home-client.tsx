@@ -1,18 +1,18 @@
 "use client";
 
-import { FloatingLogo } from "@/components/FloatingLogo";
-import { SoldowayCycle } from "@/components/SoldowayCycle";
-import { FeatureCarousel } from "@/components/FeatureCarousel";
-import { EfficiencyGap } from "@/components/EfficiencyGap";
+import { FloatingLogo } from "@/components/landing/FloatingLogo";
+import { SoldowayCycle } from "@/components/landing/SoldowayCycle";
+import { FeatureCarousel } from "@/components/landing/FeatureCarousel";
+import { EfficiencyGap } from "@/components/landing/EfficiencyGap";
 import { usePrivy } from "@privy-io/react-auth";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
-import FAQ from "@/components/FAQ";
-import Core from "@/components/Core";
-import { LiveYieldCounter } from "@/components/LiveYieldCounter";
+import FAQ from "@/components/landing/FAQ";
+import Core from "@/components/landing/Core";
+import { LiveYieldCounter } from "@/components/landing/LiveYieldCounter";
 
 type FooterLink = {
   label: string;

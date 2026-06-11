@@ -80,8 +80,9 @@ model Meeting {
   outcome          Outcome?
   status           MeetingStatus @default(PENDING)
   created_at       DateTime      @default(now())
-  payout           Payout?
-  referral_reward  ReferralReward?
+  payout            Payout?
+  referral_reward   ReferralReward?
+  platform_revenue  PlatformRevenue?
 }
 
 enum MeetingStatus {
@@ -138,7 +139,18 @@ model ReferralReward {
   referred     User     @relation("ReferredRewards", fields: [referred_id], references: [id])
   meeting_id   String   @unique
   meeting      Meeting  @relation(fields: [meeting_id], references: [id])
-  amount       Float                           // SOL sent to referrer (1% of payout)
+  amount       Float                           // SOL sent to referrer (REFERRER_SHARE_OF_FEE of platform fee)
+  tx_signature String
+  created_at   DateTime @default(now())
+}
+
+// ─── Platform Revenue ─────────────────────────────────────────────────────────
+
+model PlatformRevenue {
+  id           String   @id @default(cuid())
+  meeting_id   String   @unique
+  meeting      Meeting  @relation(fields: [meeting_id], references: [id])
+  amount       Float                           // platformCut in SOL (fee minus referrer portion)
   tx_signature String
   created_at   DateTime @default(now())
 }

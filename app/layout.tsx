@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { Inter, Inter_Tight, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
-import { Providers } from "./components/providers";
-import { Navbar } from "./components/navbar";
+import { Providers } from "@/components/layout/providers";
+import { Navbar } from "@/components/layout/navbar";
 import { cn } from "@/lib/utils";
 
 const inter = Inter({

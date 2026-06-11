@@ -1,16 +1,37 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { usePrivy } from "@privy-io/react-auth";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useMeetings } from "@/hooks/use-meetings";
 import { useWalletBalance } from "@/hooks/use-wallet-balance";
-import { ClientOnly } from "@/app/components/client-only";
-import { SidebarLayout } from "@/app/components/sidebar-layout";
+import { ClientOnly } from "@/components/layout/client-only";
+import { SidebarLayout } from "@/components/layout/sidebar-layout";
 import type { Meeting } from "@/types";
+import { PLATFORM_FEE_RATE } from "@/lib/fees";
+import { Wallet, TrendingUp, ArrowRight, Trash2, Plus, CalendarDays, Award } from "lucide-react";
+
+function getInitials(name: string) {
+  return name
+    .split(" ")
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+}
+
+/* ─── Neobrutalism style constants ──────────────────────────────────────── */
+const neoCard =
+  "bg-white border-2 border-black rounded-[15px] shadow-[4px_4px_0px_0px_#000] transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none";
+const neoBtnDark =
+  "bg-white text-black font-black border-2 border-black rounded-[15px] shadow-[4px_4px_0px_0px_#000] transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none active:translate-x-[2px] active:translate-y-[2px] active:shadow-none";
+const neoBtnPrimary =
+  "bg-[#6be1d9] text-black font-bold border-2 border-black rounded-[15px] shadow-[4px_4px_0px_0px_#000] transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none active:translate-x-[2px] active:translate-y-[2px] active:shadow-none";
+const neoBtnDanger =
+  "bg-[#FF4D50] text-black border-2 border-black rounded-[15px] shadow-[4px_4px_0px_0px_#000] transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none active:translate-x-[2px] active:translate-y-[2px] active:shadow-none";
 
 export default function SalesDashboardPage() {
   const { user, authenticated, ready } = usePrivy();
@@ -18,8 +39,6 @@ export default function SalesDashboardPage() {
   const queryClient = useQueryClient();
   const { data: balance, isLoading: balanceLoading } = useWalletBalance();
   const { data: meetings, isLoading: meetingsLoading } = useMeetings(user?.id);
-  
-
 
   const [isClaiming, setIsClaiming] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -45,7 +64,7 @@ export default function SalesDashboardPage() {
     0
   );
 
-  // ── Claim handler ────────────────────────────────────────────────────────────
+  // ── Claim handler ─────────────────────────────────────────────────────────
   async function handleClaim() {
     if (!user?.id || totalClaimable <= 0) return;
     setIsClaiming(true);
@@ -77,7 +96,7 @@ export default function SalesDashboardPage() {
     }
   }
 
-  // ── Delete PENDING meeting + cancel Cal.com booking ─────────────────────────
+  // ── Delete PENDING meeting + cancel Cal.com booking ──────────────────────
   async function handleDelete(id: string) {
     if (!confirm("Delete this meeting? The Cal.com booking will also be cancelled.")) return;
     setDeletingId(id);
@@ -99,203 +118,317 @@ export default function SalesDashboardPage() {
   if (meetingsLoading) {
     return (
       <ClientOnly>
-        <div className="min-h-screen flex items-center justify-center bg-background">
-          <div className="w-8 h-8 border-2 border-brand border-t-transparent rounded-full animate-spin" />
-        </div>
+        <SidebarLayout role="SALES">
+          <div className="bg-[#f0fdfa] min-h-full max-w-7xl mx-auto px-4 md:px-8 pt-8 pb-24 space-y-8 animate-pulse">
+            <div className="flex justify-between items-end">
+              <div className="space-y-2">
+                <div className="h-12 w-72 bg-[#e0e0e0] rounded-[5px]" />
+                <div className="h-4 w-56 bg-[#e0e0e0] rounded-[5px]" />
+              </div>
+              <div className="h-12 w-44 bg-[#e0e0e0] border-2 border-black/10 rounded-[5px]" />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className={`border-2 border-black rounded-[5px] shadow-[4px_4px_0px_0px_#000] p-6 space-y-4 ${i === 1 ? "bg-[#6be1d9]/30" : "bg-white"}`}>
+                  <div className="h-3 w-28 bg-[#e0e0e0] rounded-[5px]" />
+                  <div className="h-10 w-24 bg-[#e0e0e0] rounded-[5px]" />
+                </div>
+              ))}
+            </div>
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="bg-white border-2 border-black rounded-[5px] shadow-[4px_4px_0px_0px_#000] p-6 space-y-4">
+                <div className="flex justify-between">
+                  <div className="h-5 w-48 bg-[#e0e0e0] rounded-[5px]" />
+                  <div className="h-6 w-20 bg-[#e0e0e0] rounded-[5px]" />
+                </div>
+                <div className="h-4 w-36 bg-[#e0e0e0] rounded-[5px]" />
+                <div className="h-4 w-full bg-[#e0e0e0] rounded-[5px]" />
+              </div>
+            ))}
+          </div>
+        </SidebarLayout>
       </ClientOnly>
     );
   }
 
-  const statusColor = {
-    PENDING: "bg-yellow-50 text-yellow-700 border border-yellow-200",
-    APPROVED: "bg-green-50 text-green-700 border border-green-200",
-    REJECTED: "bg-red-50 text-red-700 border border-red-200",
-  } as const;
-
   return (
     <SidebarLayout role="SALES">
-      <div className="p-4 md:p-8 animate-fade-in space-y-12">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="bg-[#f0fdfa] min-h-full max-w-7xl mx-auto px-4 md:px-8 pt-8 pb-24 space-y-8 animate-fade-in">
+
+        {/* ── Page Header ─────────────────────────────────────────────── */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
           <div>
-            <h1 className="text-3xl font-extrabold text-black tracking-tight">Sales Dashboard</h1>
-            <p className="text-gray-500 mt-2 text-base">
+            <h1 className="text-[40px] md:text-[48px] leading-[52px] md:leading-[56px] font-black text-black tracking-tighter">
+              Sales Dashboard
+            </h1>
+            <p className="text-lg text-black/80 mt-1">
               Track your meetings and claim on-chain rewards.
             </p>
           </div>
           <Link
             href="/tasks"
-            className="inline-flex items-center justify-center bg-white border border-gray-300 text-black hover:bg-gray-50 px-6 py-3 rounded-lg text-sm font-semibold transition-colors shadow-sm"
+            className={`inline-flex items-center gap-2 px-6 py-3 ${neoBtnDark} shrink-0`}
           >
-            Browse Campaigns →
+            Browse Campaigns
+            <ArrowRight size={16} />
           </Link>
         </div>
 
-        {/* Stats */}
+        {/* ── Stats Row ───────────────────────────────────────────────── */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm flex flex-col justify-center">
-            <div className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-2">
+
+          {/* Wallet Balance */}
+          <div className={`${neoCard} p-6`}>
+            <p className="text-[11px] font-black text-black uppercase tracking-widest mb-4 flex items-center gap-2">
+              <Wallet size={16} />
               Wallet Balance
-            </div>
-            <div className="text-3xl font-bold text-black">
-              {balanceLoading ? "…" : `${(balance ?? 0).toFixed(4)} SOL`}
-            </div>
+            </p>
+            <p className="text-[40px] font-black text-black leading-none">
+              {balanceLoading ? "…" : (balance ?? 0).toFixed(4)}
+              <span className="text-black/40 font-bold text-xl ml-2">SOL</span>
+            </p>
           </div>
 
-          <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm relative overflow-hidden flex flex-col justify-center">
-            <div className="absolute -right-10 -top-10 w-32 h-32 bg-gray-100 rounded-full blur-3xl" />
-            <div className="relative z-10">
-              <div className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-2">
+          {/* Claimable Rewards — teal highlighted card */}
+          <div className="bg-[#6be1d9] border-2 border-black rounded-[15px] shadow-[4px_4px_0px_0px_#000] p-6 flex flex-col justify-between relative overflow-hidden transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none">
+            <div className="absolute -right-4 -top-4 w-24 h-24 bg-black/5 rounded-full border-4 border-black/10 pointer-events-none" />
+            <div>
+              <p className="text-[11px] font-black text-black uppercase tracking-widest mb-4 flex items-center gap-2">
+                <Award size={16} />
                 Claimable Rewards
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="text-3xl font-bold text-black">
-                  {totalClaimable.toFixed(4)} SOL
-                </div>
-                <button
-                  onClick={handleClaim}
-                  disabled={totalClaimable <= 0 || isClaiming}
-                  id="claim-btn"
-                  className="bg-black hover:bg-gray-800 text-white px-5 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isClaiming ? "Claiming…" : "Claim"}
-                </button>
-              </div>
+              </p>
+              <p className="text-[40px] font-black text-black leading-none">
+                {totalClaimable.toFixed(4)}
+                <span className="text-black/40 font-bold text-xl ml-2">SOL</span>
+              </p>
             </div>
+            <button
+              onClick={handleClaim}
+              disabled={totalClaimable <= 0 || isClaiming}
+              className={`mt-6 w-full py-3 flex items-center justify-center gap-2 ${neoBtnDark} disabled:opacity-40 disabled:cursor-not-allowed disabled:translate-x-0 disabled:translate-y-0 disabled:shadow-[4px_4px_0px_0px_#000]`}
+            >
+              {isClaiming ? (
+                <>
+                  <span className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin" />
+                  Claiming…
+                </>
+              ) : "Claim Now"}
+            </button>
           </div>
 
-          <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm flex flex-col justify-center">
-            <div className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-2">
+          {/* Total Earned */}
+          <div className={`${neoCard} p-6`}>
+            <p className="text-[11px] font-black text-black uppercase tracking-widest mb-4 flex items-center gap-2">
+              <TrendingUp size={16} />
               Total Earned
-            </div>
-            <div className="text-3xl font-bold text-green-600">
-              {totalEarned.toFixed(4)} SOL
-            </div>
+            </p>
+            <p className="text-[40px] font-black text-black leading-none">
+              {totalEarned.toFixed(4)}
+              <span className="text-black/40 font-bold text-xl ml-2">SOL</span>
+            </p>
           </div>
         </div>
 
-        {/* Meetings List */}
-        <section>
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-black tracking-tight">Submitted Meetings</h2>
+        {/* ── Submitted Meetings ──────────────────────────────────────── */}
+        <section className="space-y-4">
+
+          {/* Section Header */}
+          <div className="flex justify-between items-center px-1">
+            <h2 className="text-2xl font-black text-black flex items-center gap-2">
+              Submitted Meetings
+              {myMeetings.length > 0 && (
+                <span className="bg-black text-white border-2 border-black rounded-[15px] px-2 py-0.5 text-xs font-bold">
+                  {myMeetings.length} Total
+                </span>
+              )}
+            </h2>
             <Link
               href="/tasks"
-              className="text-sm text-black hover:underline font-semibold"
+              className="font-black text-black flex items-center gap-1 hover:bg-[#6be1d9]/20 px-3 py-1.5 rounded-[15px] border-2 border-transparent hover:border-black transition-all"
             >
-              + Submit New
+              <Plus size={18} />
+              Submit New
             </Link>
           </div>
 
-          {myMeetings.length === 0 ? (
-            <div className="text-center py-20 border border-dashed border-gray-300 rounded-2xl bg-white flex flex-col items-center justify-center">
-              <div className="text-4xl mb-4 text-gray-300">🤝</div>
-              <h3 className="text-lg font-bold text-black mb-2">No meetings yet</h3>
-              <p className="text-gray-500 mb-6 max-w-md">
-                Browse active campaigns and submit your first meeting to start earning.
-              </p>
+          {/* Empty State */}
+          {myMeetings.length === 0 && (
+            <div className="py-24 flex flex-col items-center text-center space-y-6">
+              <div className="text-[64px]">🤝</div>
+              <div className="space-y-2">
+                <h3 className="text-2xl font-black text-black">No meetings yet</h3>
+                <p className="text-black/70 text-base font-medium">
+                  Start earning rewards by engaging with top-tier campaigns.
+                </p>
+              </div>
               <Link
                 href="/tasks"
-                className="text-black font-semibold hover:underline"
+                className={`inline-flex items-center gap-2 px-8 py-4 ${neoBtnPrimary}`}
               >
-                Browse campaigns →
+                Browse Campaigns <ArrowRight size={16} />
               </Link>
             </div>
-          ) : (
-            <div className="space-y-4">
-              {myMeetings.map((m) => (
+          )}
+
+          {/* Meeting Cards */}
+          <div className="space-y-6">
+            {myMeetings.map((m) => {
+              const isApproved = m.status === "APPROVED";
+              const isPending = m.status === "PENDING";
+              const isRejected = m.status === "REJECTED";
+              const initials = getInitials(m.prospect_name);
+
+              return (
                 <div
                   key={m.id}
-                  className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm hover:border-gray-300 transition-colors flex flex-col md:flex-row md:items-center justify-between gap-6"
+                  className={`bg-white border-2 border-black rounded-[15px] shadow-[4px_4px_0px_0px_#000] p-6 flex flex-col md:flex-row gap-6 transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none ${
+                    isRejected ? "grayscale opacity-80" : ""
+                  }`}
                 >
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <span className="font-bold text-lg text-black leading-tight">{m.prospect_name}</span>
-                      <span
-                        className={`text-[10px] font-bold px-2.5 py-1 rounded-md uppercase tracking-wide ${
-                          statusColor[m.status as keyof typeof statusColor]
-                        }`}
-                      >
+                  {/* Left: Details */}
+                  <div className="flex-1 space-y-4">
+
+                    {/* Name + status row */}
+                    <div className="flex items-center gap-3">
+                      {/* Avatar */}
+                      <span className={`w-12 h-12 rounded-full border-2 border-black flex items-center justify-center font-black text-black shrink-0 ${
+                        isApproved
+                          ? "bg-[#6be1d9]"
+                          : isPending
+                          ? "bg-[#FACC00]"
+                          : "bg-black/10"
+                      }`}>
+                        {initials}
+                      </span>
+
+                      <div className="min-w-0">
+                        <h4 className="text-xl font-black text-black leading-tight truncate">
+                          {m.prospect_name}
+                        </h4>
+                        <p className="text-[12px] text-black/60 mt-0.5 truncate">
+                          {m.campaign?.title} · {m.prospect_contact} ·{" "}
+                          {new Date(m.scheduled_at).toLocaleString(undefined, {
+                            dateStyle: "medium",
+                            timeStyle: "short",
+                          })}
+                        </p>
+                      </div>
+
+                      {/* Status badge */}
+                      <span className={`ml-auto shrink-0 border-2 border-black rounded-[15px] px-2 py-0.5 text-xs font-bold uppercase ${
+                        isApproved
+                          ? "bg-[#00D6BD]/20"
+                          : isPending
+                          ? "bg-[#FACC00]"
+                          : "bg-[#FF4D50]/20"
+                      }`}>
                         {m.status}
                       </span>
                     </div>
-                    <div className="text-sm text-gray-500 flex items-center flex-wrap gap-2 mb-3">
-                      <span className="font-semibold text-gray-900">
-                        {m.campaign?.title}
-                      </span>
-                      <span className="text-gray-300">•</span>
-                      <span>{m.prospect_contact}</span>
-                      <span className="text-gray-300">•</span>
-                      <span>
-                        {new Date(m.scheduled_at).toLocaleString(undefined, {
-                          dateStyle: "medium",
-                          timeStyle: "short",
-                        })}
-                      </span>
-                    </div>
+
+                    {/* Notes */}
                     {m.notes && (
-                      <div className="text-sm text-gray-600 bg-gray-50 border border-gray-100 p-3 rounded-lg mb-3">
-                        <span className="font-medium text-gray-400 mr-2">Notes:</span>
-                        {m.notes}
+                      <div className={`bg-[#f0fdfa] p-4 rounded-[15px] border-2 border-black border-l-8 ${
+                        isApproved
+                          ? "border-l-black"
+                          : isPending
+                          ? "border-l-[#FACC00]"
+                          : "border-l-[#FF4D50]"
+                      }`}>
+                        <p className="text-sm italic text-black font-bold">"{m.notes}"</p>
                       </div>
                     )}
-                    <div className="mt-2">
+
+                    {/* Cal.com button + ref */}
+                    <div className="flex items-center gap-3">
                       {m.calendar_event_id ? (
                         <a
                           href={`https://app.cal.com/booking/${m.calendar_event_id}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-xs text-black border border-gray-200 hover:bg-gray-100 px-3 py-1.5 rounded-md font-medium inline-flex items-center gap-1.5 transition-colors"
+                          className={`bg-white border-2 border-black rounded-[15px] px-4 py-2 text-sm font-black flex items-center gap-2 shadow-[2px_2px_0px_0px_#000] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none transition-all ${
+                            isRejected ? "opacity-50 pointer-events-none" : ""
+                          }`}
                         >
-                          <span>📅</span> View Booking
+                          <CalendarDays size={16} />
+                          View Booking
                         </a>
                       ) : (
-                        <span className="text-[10px] font-bold px-2 py-1 rounded-md bg-yellow-50 text-yellow-700 border border-yellow-200">
+                        <span className="text-[10px] font-bold px-3 py-1.5 bg-[#FACC00] border-2 border-black text-black rounded-[15px]">
                           ⚠ No Cal.com Booking
+                        </span>
+                      )}
+                      {m.payout?.tx_signature && m.payout.status === "SUCCESS" && (
+                        <span className="text-black/60 text-[12px] font-mono bg-black/5 px-2 py-1 rounded-[15px] border border-black/10">
+                          Ref: #{m.id.slice(-6).toUpperCase()}
                         </span>
                       )}
                     </div>
                   </div>
 
-                  <div className="flex flex-row md:flex-col items-center md:items-end justify-between md:justify-center gap-4 border-t md:border-t-0 md:border-l border-gray-100 pt-4 md:pt-0 md:pl-6 min-w-[120px]">
-                    {/* Reward info */}
-                    {m.status === "APPROVED" && (
-                      <div className="text-right">
-                        <div className="text-lg font-bold text-green-600 mb-1">
-                          +{m.payout?.amount ?? m.campaign?.reward_per_meeting} SOL
-                        </div>
+                  {/* Right: Reward / Action */}
+                  <div className="md:w-64 border-t-2 md:border-t-0 md:border-l-2 border-black pt-5 md:pt-0 md:pl-8 flex flex-col justify-center items-end text-right gap-2">
+
+                    {isApproved && (
+                      <>
+                        <p className="text-2xl font-black text-black">
+                          +{(m.payout?.amount ?? m.campaign?.reward_per_meeting ?? 0).toFixed(4)} SOL
+                        </p>
+                        <p className="text-[10px] text-black/60 font-bold">
+                          after {(PLATFORM_FEE_RATE * 100).toFixed(0)}% platform fee
+                        </p>
                         {m.payout?.tx_signature && m.payout.status === "SUCCESS" && (
                           <a
                             href={`https://explorer.solana.com/tx/${m.payout.tx_signature}?cluster=devnet`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-xs text-black hover:underline font-mono bg-gray-50 px-2 py-1 rounded border border-gray-200"
+                            className="text-[12px] font-mono font-black text-black flex items-center gap-1 hover:underline underline-offset-2 mt-1"
                           >
-                            {m.payout.tx_signature.slice(0, 6)}…
+                            tx: {m.payout.tx_signature.slice(0, 6)}…{m.payout.tx_signature.slice(-4)}
+                            <span className="text-[10px]">↗</span>
                           </a>
                         )}
                         {m.payout?.status === "PENDING" && (
-                          <div className="text-xs font-medium text-yellow-600 bg-yellow-50 px-2 py-1 rounded border border-yellow-200">Pending Claim</div>
+                          <span className="text-[10px] font-bold text-black bg-[#FACC00] px-3 py-1 rounded-[15px] border-2 border-black">
+                            PENDING CLAIM
+                          </span>
                         )}
-                      </div>
+                      </>
                     )}
 
-                    {/* Delete — only for PENDING meetings */}
-                    {m.status === "PENDING" && (
+                    {isPending && (
                       <button
                         onClick={() => handleDelete(m.id)}
                         disabled={deletingId === m.id}
-                        className="text-sm px-4 py-2 border border-red-200 text-red-600 hover:bg-red-50 rounded-lg font-medium transition-colors disabled:opacity-50"
+                        className={`p-3 flex items-center justify-center ${neoBtnDanger} disabled:opacity-50 disabled:cursor-not-allowed`}
+                        title="Delete meeting"
                       >
-                        {deletingId === m.id ? "…" : "Delete"}
+                        <Trash2 size={18} />
                       </button>
+                    )}
+
+                    {isRejected && (
+                      <>
+                        <p className="text-sm font-bold text-[#FF4D50] uppercase tracking-tighter">Unqualified Lead</p>
+                        <p className="text-[10px] text-black/60 mt-1 font-bold">Campaign criteria not met</p>
+                      </>
                     )}
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
+              );
+            })}
+          </div>
         </section>
       </div>
+
+      {/* ── FAB — Submit New Meeting ─────────────────────────────────── */}
+      <Link
+        href="/tasks"
+        className={`fixed bottom-8 right-8 w-16 h-16 rounded-full flex items-center justify-center z-50 ${neoBtnDark} shadow-[6px_6px_0px_0px_#000] hover:shadow-none`}
+        title="Submit New Meeting"
+      >
+        <Plus size={28} />
+      </Link>
     </SidebarLayout>
   );
 }

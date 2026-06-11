@@ -2,7 +2,7 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { useCampaign } from "@/hooks/use-campaigns";
-import { ClientOnly } from "@/app/components/client-only";
+import { ClientOnly } from "@/components/layout/client-only";
 import Link from "next/link";
 
 // /meetings/[id] — redirect to tasks/[id] or show campaign detail

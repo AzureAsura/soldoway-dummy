@@ -7,9 +7,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useWalletBalance } from "@/hooks/use-wallet-balance";
-import { ClientOnly } from "@/app/components/client-only";
-import { SidebarLayout } from "@/app/components/sidebar-layout";
+import { ClientOnly } from "@/components/layout/client-only";
+import { SidebarLayout } from "@/components/layout/sidebar-layout";
 import type { Campaign, Meeting } from "@/types";
+import {
+  Check, X, ArrowRight, Plus,
+  Megaphone, Wallet, CalendarCheck, TrendingUp,
+} from "lucide-react";
 
 const MOCK_APY = 0.05;
 
@@ -34,6 +38,14 @@ function ExplorerLink({ sig }: { sig: string }) {
   );
 }
 
+/* ─── Neobrutalism style constants ──────────────────────────────────────── */
+const neoCard =
+  "bg-white border-2 border-black rounded-[15px] shadow-[4px_4px_0px_0px_#000]";
+const neoBtnDark =
+  "bg-white text-black font-bold border-2 border-black rounded-[15px] shadow-[4px_4px_0px_0px_#000] transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none active:translate-x-[2px] active:translate-y-[2px] active:shadow-none";
+const neoBadge =
+  "border-2 border-black rounded-[15px] px-2 py-0.5 text-[12px] font-bold";
+
 export default function BusinessDashboardPage() {
   const { user, authenticated, ready } = usePrivy();
   const router = useRouter();
@@ -42,7 +54,6 @@ export default function BusinessDashboardPage() {
   const [withdrawingId, setWithdrawingId] = useState<string | null>(null);
   const [approvingId, setApprovingId] = useState<string | null>(null);
 
-  // Auth guard
   useEffect(() => {
     if (!ready) return;
     if (!authenticated) {
@@ -51,7 +62,6 @@ export default function BusinessDashboardPage() {
     }
   }, [ready, authenticated, router]);
 
-  // Fetch all campaigns for this business (polls every 5s)
   const { data: campaigns, isLoading: campaignsLoading } = useQuery<Campaign[]>({
     queryKey: ["business-campaigns", user?.id],
     queryFn: async () => {
@@ -64,7 +74,6 @@ export default function BusinessDashboardPage() {
     refetchInterval: 5000,
   });
 
-  // Fetch ALL meetings across all campaigns (polls every 5s)
   const campaignIds = campaigns?.map((c) => c.id) ?? [];
   const { data: allMeetings } = useQuery<Meeting[]>({
     queryKey: ["business-meetings", campaignIds.join(",")],
@@ -81,16 +90,15 @@ export default function BusinessDashboardPage() {
     refetchInterval: 5000,
   });
 
-  // ── Computed stats ──────────────────────────────────────────────────────────
   const activeCampaigns = campaigns?.filter((c) => c.status === "ACTIVE") ?? [];
   const allCampaigns = campaigns ?? [];
-
   const totalDeposit = allCampaigns.reduce((acc, c) => acc + c.budget_total, 0);
   const totalUsed = allCampaigns.reduce((acc, c) => acc + c.budget_used, 0);
   const totalRemaining = totalDeposit - totalUsed;
   const totalYield = activeCampaigns.reduce((acc, c) => acc + calculateYield(c), 0);
+  const pendingMeetings = allMeetings?.filter((m) => m.status === "PENDING") ?? [];
+  const approvedMeetings = allMeetings?.filter((m) => m.status === "APPROVED") ?? [];
 
-  // ── Withdraw handler ────────────────────────────────────────────────────────
   async function handleWithdraw(campaign: Campaign) {
     if (!user) return;
     setWithdrawingId(campaign.id);
@@ -103,15 +111,11 @@ export default function BusinessDashboardPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Withdrawal failed");
-
       const explorerUrl = `https://explorer.solana.com/tx/${data.tx_signature}?cluster=devnet`;
       toast.success("Withdrawal successful!", {
         id: toastId,
         description: `${data.amount.toFixed(4)} SOL (incl. yield) returned to your wallet.`,
-        action: {
-          label: "View",
-          onClick: () => window.open(explorerUrl),
-        },
+        action: { label: "View", onClick: () => window.open(explorerUrl) },
       });
       queryClient.invalidateQueries({ queryKey: ["business-campaigns", user.id] });
     } catch (err: unknown) {
@@ -122,15 +126,11 @@ export default function BusinessDashboardPage() {
     }
   }
 
-  // ── Approve meeting handler ─────────────────────────────────────────────────
-  // NOTE: Do NOT call PATCH /api/meetings/[id] first — /api/payout handles
-  // the meeting status update + payout atomically in a single DB transaction.
   async function handleApprove(meeting: Meeting) {
     if (!user) return;
     setApprovingId(meeting.id);
     const toastId = toast.loading("Approving meeting & sending payout…");
     try {
-      // Trigger on-chain payout — this also sets meeting.status = APPROVED atomically
       const payoutRes = await fetch("/api/payout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -138,7 +138,6 @@ export default function BusinessDashboardPage() {
       });
       const payoutData = await payoutRes.json();
       if (!payoutRes.ok) throw new Error(payoutData.error || "Payout failed");
-
       const explorerUrl = `https://explorer.solana.com/tx/${payoutData.tx_signature}?cluster=devnet`;
       toast.success("Payout sent!", {
         id: toastId,
@@ -155,7 +154,6 @@ export default function BusinessDashboardPage() {
     }
   }
 
-  // ── Reject meeting handler ──────────────────────────────────────────────────
   async function handleReject(meeting: Meeting) {
     if (!user) return;
     try {
@@ -182,181 +180,365 @@ export default function BusinessDashboardPage() {
   if (campaignsLoading) {
     return (
       <ClientOnly>
-        <div className="min-h-screen flex items-center justify-center bg-background">
-          <div className="w-8 h-8 border-2 border-brand border-t-transparent rounded-full animate-spin" />
-        </div>
+        <SidebarLayout role="BUSINESS">
+          <div className="bg-[#f0fdfa] min-h-full p-6 md:p-8 space-y-8 max-w-7xl mx-auto animate-pulse">
+            <div className="flex justify-between items-end">
+              <div className="space-y-2">
+                <div className="h-8 w-64 bg-[#e0e0e0] rounded-[5px]" />
+                <div className="h-4 w-48 bg-[#e0e0e0] rounded-[5px]" />
+              </div>
+              <div className="h-12 w-40 bg-[#e0e0e0] border-2 border-black/10 rounded-[5px]" />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="bg-white border-2 border-black rounded-[5px] shadow-[4px_4px_0px_0px_#000] p-5 space-y-4">
+                  <div className="h-6 w-6 bg-[#e0e0e0] rounded-[5px]" />
+                  <div className="h-3 w-24 bg-[#e0e0e0] rounded-[5px]" />
+                  <div className="h-12 w-16 bg-[#e0e0e0] rounded-[5px]" />
+                </div>
+              ))}
+            </div>
+            <div className="bg-white border-2 border-black rounded-[5px] shadow-[4px_4px_0px_0px_#000] overflow-hidden">
+              <div className="p-5 border-b-2 border-black bg-[#6be1d9]/10">
+                <div className="h-5 w-40 bg-[#e0e0e0] rounded-[5px]" />
+              </div>
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="flex gap-6 px-6 py-4 border-b border-black/10">
+                  <div className="h-4 flex-1 bg-[#e0e0e0] rounded-[5px]" />
+                  <div className="h-4 w-24 bg-[#e0e0e0] rounded-[5px]" />
+                  <div className="h-4 w-24 bg-[#e0e0e0] rounded-[5px]" />
+                </div>
+              ))}
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {[...Array(2)].map((_, i) => (
+                <div key={i} className="bg-white border-2 border-black rounded-[5px] shadow-[4px_4px_0px_0px_#000] p-5 space-y-4">
+                  <div className="flex gap-2">
+                    <div className="h-6 w-20 bg-[#e0e0e0] rounded-[5px]" />
+                    <div className="h-6 w-16 bg-[#e0e0e0] rounded-[5px]" />
+                  </div>
+                  <div className="h-5 w-3/4 bg-[#e0e0e0] rounded-[5px]" />
+                  <div className="h-3 w-full bg-[#e0e0e0] rounded-[5px]" />
+                  <div className="h-10 w-full bg-[#e0e0e0] rounded-[5px]" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </SidebarLayout>
       </ClientOnly>
     );
   }
 
   return (
     <SidebarLayout role="BUSINESS">
-      <div className="p-4 md:p-8 animate-fade-in space-y-12">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="bg-[#f0fdfa] min-h-full p-6 md:p-8 space-y-8 max-w-7xl mx-auto animate-fade-in">
+
+        {/* ── Page Header ─────────────────────────────────────────────── */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
           <div>
-            <h1 className="text-3xl font-extrabold text-black tracking-tight">Business Dashboard</h1>
-            <p className="text-gray-500 mt-2 text-base">
-              Manage campaigns, approve meetings, and track escrow yield.
+            <h1 className="text-[32px] font-black leading-tight tracking-tight text-black">
+              Business Dashboard
+            </h1>
+            <p className="text-base font-medium text-black/70 mt-1">
+              Manage your sales campaigns and approve meetings.
             </p>
           </div>
           <Link
             href="/campaigns/new"
-            className="inline-flex items-center justify-center bg-black hover:bg-gray-800 text-white px-6 py-3 rounded-lg text-sm font-semibold transition-colors shadow-sm"
+            className={`inline-flex items-center gap-2 px-6 py-3 ${neoBtnDark}`}
           >
-            + New Campaign
+            <Plus size={16} />
+            Create Campaign
           </Link>
         </div>
 
-        {/* Stats Grid */}
+        {/* ── Stats Grid ──────────────────────────────────────────────── */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {[
-            {
-              label: "Wallet Balance",
-              value: balanceLoading ? "…" : `${(balance ?? 0).toFixed(4)} SOL`,
-            },
-            {
-              label: "Total Deposited",
-              value: `${totalDeposit.toFixed(4)} SOL`,
-            },
-            {
-              label: "Estimated Yield",
-              value: `+${totalYield.toFixed(6)} SOL`,
-              badge: "5% APY Mock",
-            },
-            {
-              label: "Budget Remaining",
-              value: `${totalRemaining.toFixed(4)} SOL`,
-            },
-          ].map((stat) => (
-            <div
-              key={stat.label}
-              className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm flex flex-col justify-center"
-            >
-              <div className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-2 flex items-center justify-between">
-                <span>{stat.label}</span>
-                {stat.badge && (
-                  <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-[10px] font-bold">
-                    {stat.badge}
-                  </span>
-                )}
-              </div>
-              <div className="text-3xl font-bold text-black">{stat.value}</div>
+          {/* Active Campaigns */}
+          <div className={`${neoCard} p-5`}>
+            <div className="flex justify-between items-start mb-4">
+              <Megaphone size={22} className="text-black" />
+              <span className="w-3 h-3 rounded-full bg-[#00D6BD] border border-black" />
             </div>
-          ))}
+            <p className="text-[11px] font-bold text-black/60 uppercase tracking-widest mb-1">
+              Active Campaigns
+            </p>
+            <p className="text-[48px] font-black leading-none tracking-tight text-black">
+              {activeCampaigns.length}
+            </p>
+          </div>
+
+          {/* Total Deposited */}
+          <div className={`${neoCard} p-5`}>
+            <div className="mb-4">
+              <Wallet size={22} className="text-black" />
+            </div>
+            <p className="text-[11px] font-bold text-black/60 uppercase tracking-widest mb-1">
+              Total Deposited
+            </p>
+            <div className="flex items-baseline gap-2">
+              <p className="text-[48px] font-black leading-none tracking-tight text-black">
+                {totalDeposit.toFixed(1)}
+              </p>
+              <p className="text-xl font-bold text-black/60">SOL</p>
+            </div>
+          </div>
+
+          {/* Meetings Approved */}
+          <div className={`${neoCard} p-5`}>
+            <div className="mb-4">
+              <CalendarCheck size={22} className="text-black" />
+            </div>
+            <p className="text-[11px] font-bold text-black/60 uppercase tracking-widest mb-1">
+              Meetings Approved
+            </p>
+            <p className="text-[48px] font-black leading-none tracking-tight text-black">
+              {approvedMeetings.length}
+            </p>
+          </div>
+
+          {/* Total Paid Out */}
+          <div className={`${neoCard} p-5`}>
+            <div className="mb-4">
+              <TrendingUp size={22} className="text-black" />
+            </div>
+            <p className="text-[11px] font-bold text-black/60 uppercase tracking-widest mb-1">
+              Total Paid Out
+            </p>
+            <div className="flex items-baseline gap-2">
+              <p className="text-[48px] font-black leading-none tracking-tight text-black">
+                {totalUsed.toFixed(1)}
+              </p>
+              <p className="text-xl font-bold text-black">SOL</p>
+            </div>
+          </div>
         </div>
 
-        {/* Active Campaigns */}
+        {/* ── Action Required — Pending Meetings ──────────────────────── */}
+        {pendingMeetings.length > 0 && (
+          <section className={`${neoCard} overflow-hidden`}>
+            {/* Section header */}
+            <div className="px-6 py-4 border-b-2 border-black flex justify-between items-center bg-[#6be1d9]/10">
+              <div className="flex items-center gap-3">
+                <h2 className="text-xl font-black text-black">Action Required</h2>
+                <span className={`${neoBadge} bg-[#FACC00]`}>
+                  {pendingMeetings.length} PENDING
+                </span>
+              </div>
+            </div>
+
+            {/* Table */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="bg-[#6be1d9]/20 border-b-2 border-black">
+                    {["Campaign", "Prospect", "Contact", "Scheduled", "Actions"].map((h) => (
+                      <th
+                        key={h}
+                        className={`px-5 py-3 text-[11px] font-bold text-black uppercase tracking-wider${h === "Actions" ? " text-right" : ""}`}
+                      >
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y-2 divide-black/10">
+                  {pendingMeetings.map((m) => (
+                    <tr key={m.id} className="hover:bg-[#6be1d9]/5 transition-colors">
+                      <td className="px-5 py-4 text-sm font-bold text-black whitespace-nowrap">
+                        {allCampaigns.find((c) => c.id === m.campaign_id)?.title ?? "—"}
+                      </td>
+                      <td className="px-5 py-4 text-sm font-medium text-black whitespace-nowrap">
+                        {m.prospect_name}
+                      </td>
+                      <td className="px-5 py-4 text-xs font-mono text-black/70 whitespace-nowrap">
+                        {m.prospect_contact}
+                      </td>
+                      <td className="px-5 py-4 text-sm text-black/70 whitespace-nowrap">
+                        {new Date(m.scheduled_at).toLocaleString(undefined, {
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                        })}
+                      </td>
+                      <td className="px-5 py-4 whitespace-nowrap">
+                        <div className="flex justify-end gap-2">
+                          <button
+                            onClick={() => handleApprove(m)}
+                            disabled={approvingId === m.id}
+                            className={`w-10 h-10 flex items-center justify-center ${neoBtnDark} disabled:opacity-50 disabled:cursor-not-allowed`}
+                            title="Approve"
+                          >
+                            <Check size={16} />
+                          </button>
+                          <button
+                            onClick={() => handleReject(m)}
+                            disabled={approvingId === m.id}
+                            className="w-10 h-10 flex items-center justify-center border-2 border-black rounded-[15px] bg-[#FF4D50]/20 transition-all hover:translate-x-[2px] hover:translate-y-[2px] disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Reject"
+                          >
+                            <X size={16} className="text-black" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
+
+        {/* ── My Campaigns ────────────────────────────────────────────── */}
         <section>
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-black tracking-tight">Active Campaigns</h2>
-            <span className="text-sm font-medium text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
-              {activeCampaigns.length} active
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-black text-black tracking-tight">My Campaigns</h2>
+            <span className={`${neoBadge} bg-white`}>
+              {allCampaigns.length} TOTAL
             </span>
           </div>
+
           {allCampaigns.length === 0 ? (
-            <div className="text-center py-20 border border-dashed border-gray-300 rounded-2xl bg-white flex flex-col items-center justify-center">
-              <div className="text-4xl mb-4 text-gray-300">📋</div>
-              <h3 className="text-lg font-bold text-black mb-2">No campaigns yet</h3>
-              <p className="text-gray-500 mb-6 max-w-md">
+            <div className={`${neoCard} border-dashed py-20 flex flex-col items-center justify-center`}>
+              <div className="w-14 h-14 bg-[#6be1d9]/20 border-2 border-black rounded-[15px] flex items-center justify-center mb-4 shadow-[2px_2px_0px_0px_#000]">
+                <Megaphone size={28} className="text-black" />
+              </div>
+              <h3 className="text-lg font-black text-black mb-2">No campaigns yet</h3>
+              <p className="text-black/70 mb-6 max-w-md text-sm text-center font-medium">
                 Create a campaign to deposit SOL and start rewarding your sales team for productive meetings.
               </p>
               <Link
                 href="/campaigns/new"
-                className="text-black font-semibold hover:underline"
+                className="text-black font-black text-[13px] flex items-center gap-1 group underline decoration-2 underline-offset-4"
               >
-                Create your first campaign →
+                Create your first campaign{" "}
+                <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
               </Link>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {allCampaigns.map((campaign) => {
                 const yieldEst = calculateYield(campaign);
                 const remaining = campaign.budget_total - campaign.budget_used;
-                const progress = campaign.meeting_capacity > 0
-                  ? (campaign.meetings_used / campaign.meeting_capacity) * 100
-                  : 0;
+                const progress =
+                  campaign.meeting_capacity > 0
+                    ? (campaign.meetings_used / campaign.meeting_capacity) * 100
+                    : 0;
                 return (
                   <div
                     key={campaign.id}
-                    className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm hover:border-gray-300 transition-colors flex flex-col"
+                    className={`${neoCard} p-5 flex flex-col`}
                   >
+                    {/* Card Header */}
                     <div className="flex justify-between items-start mb-4">
-                      <div className="pr-4">
-                        <h3 className="font-bold text-lg text-black leading-tight mb-1">{campaign.title}</h3>
-                        <p className="text-sm text-gray-500">
-                          {campaign.company} <span className="mx-1.5 text-gray-300">•</span> {campaign.category}
-                        </p>
+                      <div>
+                        <span className={`${neoBadge} bg-[#6be1d9]/20 mb-2 inline-block uppercase`}>
+                          {campaign.category}
+                        </span>
+                        <h3 className="text-xl font-black text-black mt-1 leading-tight">
+                          {campaign.title}
+                        </h3>
+                        <p className="text-sm font-medium text-black/70 mt-0.5">{campaign.company}</p>
                       </div>
                       <span
-                        className={`text-xs font-bold px-2.5 py-1 rounded-md border ${
+                        className={`${neoBadge} flex items-center gap-1.5 shrink-0 ${
                           campaign.status === "ACTIVE"
-                            ? "bg-green-50 text-green-700 border-green-200"
+                            ? "bg-[#00D6BD]/20 text-black"
                             : campaign.status === "CLOSED"
-                            ? "bg-yellow-50 text-yellow-700 border-yellow-200"
-                            : "bg-gray-50 text-gray-600 border-gray-200"
+                            ? "bg-black text-white"
+                            : "bg-white text-black"
                         }`}
                       >
+                        <span
+                          className={`w-2 h-2 rounded-full border border-black ${
+                            campaign.status === "ACTIVE"
+                              ? "bg-[#00D6BD]"
+                              : campaign.status === "CLOSED"
+                              ? "bg-white"
+                              : "bg-black/40"
+                          }`}
+                        />
                         {campaign.status}
                       </span>
                     </div>
 
-                    {/* Meeting capacity progress bar */}
-                    <div className="mb-6 bg-gray-50 rounded-lg p-4 border border-gray-100">
-                      <div className="flex justify-between text-xs font-semibold text-gray-600 mb-2">
-                        <span>Meetings: {campaign.meetings_used} / {campaign.meeting_capacity}</span>
-                        <span>{progress.toFixed(0)}%</span>
+                    {/* Progress Bar */}
+                    <div className="mb-5">
+                      <div className="flex justify-between text-[11px] font-bold text-black mb-2 uppercase">
+                        <span>Meetings Booked</span>
+                        <span>
+                          {campaign.meetings_used}/{campaign.meeting_capacity}
+                        </span>
                       </div>
-                      <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                      <div className="w-full bg-[#e0e0e0] border-2 border-black rounded-[2px] h-3 overflow-hidden">
                         <div
-                          className="h-full bg-black rounded-full transition-all"
+                          className="bg-black h-full transition-all duration-500"
                           style={{ width: `${Math.min(progress, 100)}%` }}
                         />
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-4 mb-6">
-                      <div className="flex flex-col">
-                        <span className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Reward</span>
-                        <span className="text-base font-bold text-black">{campaign.reward_per_meeting} SOL</span>
+                    {/* Stats 2-col */}
+                    <div className="grid grid-cols-2 gap-3 mb-4 flex-grow">
+                      <div className="bg-[#6be1d9]/10 border-2 border-black rounded-[15px] p-3">
+                        <p className="text-[10px] text-black uppercase font-bold tracking-wider mb-1">
+                          Reward/Meeting
+                        </p>
+                        <p className="text-xl font-black text-black">
+                          {campaign.reward_per_meeting} SOL
+                        </p>
                       </div>
-                      <div className="flex flex-col border-l border-gray-100 pl-4">
-                        <span className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Remaining</span>
-                        <span className="text-base font-bold text-black">{remaining.toFixed(3)} SOL</span>
-                      </div>
-                      <div className="flex flex-col border-l border-gray-100 pl-4">
-                        <span className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Est. Yield</span>
-                        <span className="text-base font-bold text-green-600">+{yieldEst.toFixed(4)}</span>
+                      <div className="bg-[#6be1d9]/10 border-2 border-black rounded-[15px] p-3">
+                        <p className="text-[10px] text-black uppercase font-bold tracking-wider mb-1">
+                          Budget Remaining
+                        </p>
+                        <p className="text-xl font-black text-black">
+                          {remaining.toFixed(3)} SOL
+                        </p>
                       </div>
                     </div>
 
+                    {/* Est. Yield */}
+                    {yieldEst > 0 && (
+                      <div className="mb-4 text-[11px] text-black font-bold">
+                        +{yieldEst.toFixed(6)} SOL est. yield
+                        <span className="ml-2 bg-[#6be1d9]/20 border border-black text-black px-1.5 py-0.5 rounded-[3px] text-[10px] font-bold">
+                          Mock
+                        </span>
+                      </div>
+                    )}
+
                     {/* Tx link */}
                     {campaign.tx_signature && (
-                      <div className="text-xs text-gray-400 mb-5 flex items-center gap-2">
-                        <span>Deposit Tx:</span>
+                      <div className="text-[11px] text-black/70 mb-4 flex items-center gap-1.5 font-medium">
+                        <span>Deposit:</span>
                         <a
                           href={`https://explorer.solana.com/tx/${campaign.tx_signature}?cluster=devnet`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-black hover:underline font-mono bg-gray-50 px-2 py-0.5 rounded"
+                          className="font-mono text-black hover:underline bg-[#6be1d9]/10 border border-black px-1.5 py-0.5 rounded-[3px]"
                         >
-                          {campaign.tx_signature.slice(0, 8)}…
+                          {campaign.tx_signature.slice(0, 10)}…
                         </a>
                       </div>
                     )}
 
-                    <div className="mt-auto flex gap-3 pt-4 border-t border-gray-100">
+                    {/* Card Footer */}
+                    <div className="pt-4 border-t-2 border-black flex justify-between items-center mt-auto">
                       <Link
                         href={`/campaigns/${campaign.id}`}
-                        className="flex-1 flex items-center justify-center text-sm py-2 bg-white hover:bg-gray-50 text-black border border-gray-300 rounded-lg font-medium transition-colors"
+                        className="text-black font-black text-[13px] flex items-center gap-1 group underline decoration-2 underline-offset-4"
                       >
-                        View Details
+                        VIEW DETAILS{" "}
+                        <ArrowRight
+                          size={14}
+                          className="group-hover:translate-x-1 transition-transform"
+                        />
                       </Link>
                       {campaign.status !== "WITHDRAWN" && remaining > 0 && (
                         <button
                           onClick={() => handleWithdraw(campaign)}
                           disabled={withdrawingId === campaign.id}
-                          className="flex items-center justify-center text-sm px-5 py-2 border border-red-200 text-red-600 hover:bg-red-50 rounded-lg font-medium transition-colors disabled:opacity-50"
+                          className="text-[13px] px-4 py-1.5 border-2 border-black bg-[#FF4D50]/20 rounded-[15px] font-bold transition-all hover:translate-x-[1px] hover:translate-y-[1px] disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           {withdrawingId === campaign.id ? "…" : "Withdraw"}
                         </button>
@@ -369,97 +551,110 @@ export default function BusinessDashboardPage() {
           )}
         </section>
 
-        {/* Meeting Log */}
-        <section>
-          <h2 className="text-2xl font-bold text-black tracking-tight mb-6">Meeting Log</h2>
-          {!allMeetings || allMeetings.length === 0 ? (
-            <div className="text-center py-16 border border-dashed border-gray-300 rounded-2xl bg-white text-gray-500 text-sm">
-              No meetings submitted yet.
+        {/* ── Meeting Log ─────────────────────────────────────────────── */}
+        {allMeetings && allMeetings.length > 0 && (
+          <section>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-black text-black tracking-tight">Meeting Log</h2>
+              <span className={`${neoBadge} bg-white`}>
+                {allMeetings.length} TOTAL
+              </span>
             </div>
-          ) : (
-            <div className="bg-white border border-gray-200 rounded-xl overflow-x-auto shadow-sm">
+            <div className={`${neoCard} overflow-x-auto`}>
               <table className="w-full text-sm text-left">
-                <thead className="bg-gray-50 border-b border-gray-200">
+                <thead className="bg-[#6be1d9]/20 border-b-2 border-black">
                   <tr>
-                    <th className="px-6 py-4 font-semibold text-gray-500 uppercase tracking-wider text-xs">Prospect</th>
-                    <th className="px-6 py-4 font-semibold text-gray-500 uppercase tracking-wider text-xs">Contact</th>
-                    <th className="px-6 py-4 font-semibold text-gray-500 uppercase tracking-wider text-xs">Date &amp; Time</th>
-                    <th className="px-6 py-4 font-semibold text-gray-500 uppercase tracking-wider text-xs">Notes</th>
-                    <th className="px-6 py-4 font-semibold text-gray-500 uppercase tracking-wider text-xs">Status</th>
-                    <th className="px-6 py-4 font-semibold text-gray-500 uppercase tracking-wider text-xs">Cal.com</th>
-                    <th className="px-6 py-4 font-semibold text-gray-500 uppercase tracking-wider text-xs">Payout Tx</th>
-                    <th className="px-6 py-4 font-semibold text-gray-500 uppercase tracking-wider text-xs">Actions</th>
+                    {["Prospect", "Contact", "Date & Time", "Notes", "Status", "Cal.com", "Payout Tx", "Actions"].map(
+                      (h) => (
+                        <th
+                          key={h}
+                          className="px-5 py-3 text-[11px] font-bold text-black uppercase tracking-wider whitespace-nowrap"
+                        >
+                          {h}
+                        </th>
+                      )
+                    )}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y-2 divide-black/10">
                   {allMeetings.map((m) => (
-                    <tr key={m.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4 font-medium text-black whitespace-nowrap">{m.prospect_name}</td>
-                      <td className="px-6 py-4 text-gray-600 text-xs whitespace-nowrap">{m.prospect_contact}</td>
-                      <td className="px-6 py-4 text-gray-600 whitespace-nowrap text-xs">
+                    <tr key={m.id} className="hover:bg-[#6be1d9]/5 transition-colors">
+                      <td className="px-5 py-4 font-bold text-black whitespace-nowrap">
+                        {m.prospect_name}
+                      </td>
+                      <td className="px-5 py-4 text-xs font-mono text-black/70 whitespace-nowrap">
+                        {m.prospect_contact}
+                      </td>
+                      <td className="px-5 py-4 text-black/70 whitespace-nowrap text-xs">
                         {new Date(m.scheduled_at).toLocaleString(undefined, {
                           dateStyle: "medium",
                           timeStyle: "short",
                         })}
                       </td>
-                      <td className="px-6 py-4 text-gray-600 max-w-[200px] truncate text-xs" title={m.notes || ""}>
+                      <td
+                        className="px-5 py-4 text-black/70 max-w-[180px] truncate text-xs"
+                        title={m.notes || ""}
+                      >
                         {m.notes || "—"}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-5 py-4 whitespace-nowrap">
                         <span
-                          className={`text-[10px] font-bold px-2.5 py-1 rounded-md uppercase tracking-wide border ${
+                          className={`${neoBadge} uppercase ${
                             m.status === "APPROVED"
-                              ? "bg-green-50 text-green-700 border-green-200"
+                              ? "bg-[#00D6BD]/20 text-black"
                               : m.status === "REJECTED"
-                              ? "bg-red-50 text-red-700 border-red-200"
-                              : "bg-yellow-50 text-yellow-700 border-yellow-200"
+                              ? "bg-[#FF4D50]/20 text-black"
+                              : "bg-[#FACC00] text-black"
                           }`}
                         >
                           {m.status}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-5 py-4 whitespace-nowrap">
                         {m.calendar_event_id ? (
                           <a
                             href={`https://app.cal.com/booking/${m.calendar_event_id}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-xs text-black border border-gray-200 hover:bg-gray-100 px-3 py-1.5 rounded-md font-medium inline-flex items-center gap-1.5 transition-colors"
+                            className="text-xs text-black border-2 border-black hover:bg-[#6be1d9]/10 px-3 py-1 rounded-[15px] font-bold inline-flex items-center gap-1.5 transition-colors"
                           >
-                            <span>📅</span> View Booking
+                            📅 View
                           </a>
                         ) : (
-                          <span className="text-gray-400 text-xs italic">—</span>
+                          <span className="text-black/40 text-xs italic">—</span>
                         )}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-5 py-4 whitespace-nowrap">
                         {m.payout?.tx_signature && m.payout.status === "SUCCESS" ? (
-                          <div className="bg-gray-50 border border-gray-200 px-2 py-1 rounded inline-block">
+                          <div className="bg-[#6be1d9]/10 border-2 border-black px-2 py-1 rounded-[15px] inline-block">
                             <ExplorerLink sig={m.payout.tx_signature} />
                           </div>
                         ) : (
-                          <span className="text-gray-400 text-xs italic">—</span>
+                          <span className="text-black/40 text-xs italic">—</span>
                         )}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-5 py-4 whitespace-nowrap">
                         {m.status === "PENDING" ? (
                           <div className="flex gap-2">
                             <button
                               onClick={() => handleApprove(m)}
                               disabled={approvingId === m.id}
-                              className="text-xs px-3 py-1.5 bg-black text-white hover:bg-gray-800 rounded-md font-medium transition-colors disabled:opacity-50"
+                              className={`p-1.5 ${neoBtnDark} disabled:opacity-50 disabled:cursor-not-allowed`}
+                              title="Approve"
                             >
-                              {approvingId === m.id ? "…" : "Approve"}
+                              <Check size={14} />
                             </button>
                             <button
                               onClick={() => handleReject(m)}
-                              className="text-xs px-3 py-1.5 bg-white text-red-600 border border-red-200 hover:bg-red-50 rounded-md font-medium transition-colors"
+                              disabled={approvingId === m.id}
+                              className="p-1.5 border-2 border-black bg-[#FF4D50]/20 rounded-[15px] transition-all hover:translate-x-[1px] hover:translate-y-[1px] disabled:opacity-50 disabled:cursor-not-allowed"
+                              title="Reject"
                             >
-                              Reject
+                              <X size={14} className="text-black" />
                             </button>
                           </div>
                         ) : (
-                          <span className="text-gray-400 text-xs italic">—</span>
+                          <span className="text-black/40 text-xs italic">—</span>
                         )}
                       </td>
                     </tr>
@@ -467,8 +662,8 @@ export default function BusinessDashboardPage() {
                 </tbody>
               </table>
             </div>
-          )}
-        </section>
+          </section>
+        )}
       </div>
     </SidebarLayout>
   );
