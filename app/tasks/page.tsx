@@ -20,7 +20,7 @@ const neoCard =
 const neoBtnDark =
   "bg-black text-white font-bold border-2 border-black rounded-[15px] shadow-[4px_4px_0px_0px_#000] transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none";
 const neoBtnMain =
-  "bg-[#FACC00] text-black font-bold border-2 border-black rounded-[15px] shadow-[4px_4px_0px_0px_#000] transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none active:translate-x-[2px] active:translate-y-[2px] active:shadow-none";
+  "bg-[#6be1d9] text-black font-bold border-2 border-black rounded-[15px] shadow-[4px_4px_0px_0px_#000] transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none active:translate-x-[2px] active:translate-y-[2px] active:shadow-none";
 const neoBadge =
   "border-2 border-black rounded-[15px] px-2 py-0.5 text-[12px] font-black";
 const neoInput =
@@ -75,7 +75,7 @@ export default function TasksPage() {
                 </p>
               </div>
               {!isLoading && (
-                <div className={`${neoBadge} bg-[#FACC00] flex items-center gap-2 shrink-0 py-2 px-4`}>
+                <div className={`${neoBadge} bg-[#6be1d9] flex items-center gap-2 shrink-0 py-2 px-4`}>
                   <TrendingUp size={16} />
                   <span className="text-[11px] font-black uppercase tracking-wide">
                     {filtered.length} Active Deal{filtered.length !== 1 ? "s" : ""} Found
@@ -185,10 +185,10 @@ function CampaignCard({ campaign }: { campaign: Campaign }) {
 
       {/* Top: Category + Active badge */}
       <div className="flex justify-between items-start mb-6">
-        <span className="border-2 border-black rounded-[15px] px-2 py-0.5 text-[12px] font-black bg-[#FACC00] uppercase">
+        <span className="border-2 border-black rounded-[15px] px-2 py-0.5 text-[12px] font-black bg-[#6be1d9] uppercase">
           {campaign.category}
         </span>
-        <div className="flex items-center gap-1.5 border-2 border-black rounded-[15px] px-2 text-[10px] font-black uppercase bg-[#FACC00]">
+        <div className="flex items-center gap-1.5 border-2 border-black rounded-[15px] px-2 text-[10px] font-black uppercase bg-[#6be1d9]">
           <div className="w-2 h-2 bg-black rounded-full" />
           Active
         </div>

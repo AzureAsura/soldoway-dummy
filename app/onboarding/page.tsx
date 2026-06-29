@@ -82,59 +82,78 @@ export default function OnboardingPage() {
 
   if (!authenticated) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <p className="text-muted-foreground">Please log in first.</p>
+      <div className="min-h-screen flex items-center justify-center bg-[#6be1d9]/5 text-black font-sans antialiased">
+        <div className="p-5 bg-white border-2 border-black rounded-[12px] shadow-[3px_3px_0px_0px_#000]">
+          <p className="font-black uppercase tracking-wider text-xs">Please log in first.</p>
+        </div>
       </div>
     );
   }
 
   return (
     <ClientOnly>
-      <main className="min-h-screen flex items-center justify-center bg-background px-6">
-        <div className="max-w-lg w-full animate-slide-up">
-          <div className="text-center mb-10">
-            <h1 className="text-3xl font-bold mb-2">Choose your role</h1>
-            <p className="text-muted-foreground">
-              This determines your experience on Soldoway. You can&apos;t change
-              this later.
+      <main className="min-h-screen flex items-center justify-center bg-[#6be1d9]/5 px-4 py-8 text-black font-sans antialiased">
+        {/* Container Utama - Border diturunkan ke border-2, shadow dikurangi */}
+        <div className="max-w-md w-full bg-white border-2 border-black rounded-[20px] p-6 md:p-8 shadow-[6px_6px_0px_0px_#000]">
+          
+          {/* Header */}
+          <div className="text-center mb-8 border-b-2 border-black pb-6">
+            <h1 className="text-2xl md:text-3xl font-black uppercase tracking-wide mb-2">
+              Choose your role
+            </h1>
+            <p className="text-xs md:text-sm font-bold text-black/60 max-w-sm mx-auto">
+              This determines your experience on Soldoway. You can&apos;t change this later.
             </p>
           </div>
 
-          <div className="grid gap-4 mb-8">
-            {ROLES.map((role) => (
-              <button
-                key={role.value}
-                id={`role-${role.value.toLowerCase()}`}
-                onClick={() => setSelectedRole(role.value)}
-                className={`w-full text-left p-5 rounded-2xl border-2 transition-all duration-200 ${
-                  selectedRole === role.value
-                    ? "border-brand bg-brand/5"
-                    : "border-border bg-card hover:border-brand/40"
-                }`}
-              >
-                <div className="flex items-center gap-4">
-                  <span className="text-3xl">{role.emoji}</span>
-                  <div>
-                    <div className="font-semibold text-foreground">
-                      {role.label}
+          {/* Grid Role Pilihan */}
+          <div className="grid gap-4 mb-6">
+            {ROLES.map((role) => {
+              const isSelected = selectedRole === role.value;
+              return (
+                <button
+                  key={role.value}
+                  id={`role-${role.value.toLowerCase()}`}
+                  onClick={() => setSelectedRole(role.value)}
+                  className={`w-full text-left p-4 rounded-[12px] border-2 border-black transition-all ${
+                    isSelected
+                      ? "bg-[#6be1d9] shadow-[3px_3px_0px_0px_#000] translate-x-[-1px] translate-y-[-1px]"
+                      : "bg-white hover:bg-[#6be1d9]/5 hover:shadow-[3px_3px_0px_0px_#000] hover:translate-x-[-1px] hover:translate-y-[-1px]"
+                  }`}
+                >
+                  <div className="flex items-center gap-4">
+                    {/* Emoji Container */}
+                    <span className="text-2xl p-1.5 bg-white border-2 border-black rounded-[15px] shadow-[1.5px_1.5px_0px_0px_#000] shrink-0">
+                      {role.emoji}
+                    </span>
+                    
+                    <div className="flex-1 min-w-0">
+                      <div className="font-black text-base uppercase tracking-wider">
+                        {role.label}
+                      </div>
+                      <div className="text-xs font-bold text-black/70 mt-0.5 leading-normal">
+                        {role.desc}
+                      </div>
                     </div>
-                    <div className="text-sm text-muted-foreground mt-0.5">
-                      {role.desc}
+
+                    {/* Checkmark Bulat */}
+                    <div className={`w-5 h-5 rounded-full border-2 border-black flex items-center justify-center shrink-0 transition-colors ${
+                      isSelected ? "bg-black text-[#6be1d9]" : "bg-white text-transparent"
+                    }`}>
+                      <span className="text-[10px] font-black">✓</span>
                     </div>
                   </div>
-                  {selectedRole === role.value && (
-                    <span className="ml-auto text-brand">✓</span>
-                  )}
-                </div>
-              </button>
-            ))}
+                </button>
+              );
+            })}
           </div>
 
+          {/* Tombol Aksi Utama */}
           <button
             id="onboarding-complete"
             onClick={handleComplete}
             disabled={!selectedRole || isLoading}
-            className="w-full bg-brand hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-3.5 rounded-xl transition-all duration-200 hover:scale-[1.01] active:scale-[0.99]"
+            className="w-full bg-black disabled:bg-black/10 disabled:text-black/30 disabled:border-black/5 disabled:shadow-none disabled:cursor-not-allowed text-[#6be1d9] border-2 border-black font-black text-sm uppercase tracking-widest py-3.5 rounded-[12px] shadow-[4px_4px_0px_0px_#000] transition-all hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none active:translate-x-[2px] active:translate-y-[2px]"
           >
             {isLoading ? "Setting up your account…" : "Continue →"}
           </button>

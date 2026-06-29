@@ -1,6 +1,3 @@
-"use client";
-
-import React from "react";
 import { motion } from "framer-motion";
 import {
   Carousel,
@@ -46,73 +43,67 @@ const features: FeatureCard[] = [
 
 export function FeatureCarousel() {
   return (
-    <section className="bg-white text-black py-24 md:py-32 overflow-hidden">
-      <div className="max-w-7xl mx-auto px-6">
-        <div className="flex flex-col lg:flex-row gap-12 lg:gap-20 items-start">
+    <section className="bg-white text-black py-16 md:py-24 border-b-2 border-black overflow-hidden font-sans antialiased">
+      <div className="max-w-6xl mx-auto px-4 md:px-6">
+        <div className="flex flex-col lg:flex-row gap-10 lg:gap-16 items-start">
           
-          <div className="w-full lg:w-[35%] shrink-0 lg:sticky lg:top-32">
+          {/* Kolom Kiri: Sticky Header */}
+          <div className="w-full lg:w-[35%] shrink-0 lg:sticky lg:top-28">
             <motion.h2 
               initial={{ opacity: 0, x: -20 }}
               whileInView={{ opacity: 1, x: 0 }}
-              className="text-5xl md:text-6xl font-black tracking-tighter leading-[0.9] mb-8 uppercase"
+              className="text-3xl md:text-5xl font-black tracking-tight leading-[1.05] mb-6 uppercase text-black"
             >
-              Where Capital <br /> Meets <br /> Verifiability.
+              Where Capital <br className="hidden lg:block" /> Meets <br className="hidden lg:block" /> Verifiability.
             </motion.h2>
-            <div className="h-[3px] w-20 bg-black mb-8" />
-            <p className="text-xl text-gray-500 font-bold leading-tight max-w-sm">
+            <div className="h-[4px] w-16 bg-[#6be1d9] border border-black mb-6" />
+            <p className="text-sm md:text-base text-black/70 font-bold leading-normal max-w-sm">
               We treat every dollar of your B2B sales budget as a working asset.
             </p>
           </div>
 
-          {/* Right Column - Polished Carousel (Statis) */}
           <div className="w-full lg:w-[65%] min-w-0">
             <Carousel opts={{ align: "start", loop: false }} className="w-full">
-              <CarouselContent className="-ml-6 py-6">
+              <CarouselContent className="-ml-4 py-4">
                 {features.map((feature, i) => (
                   <CarouselItem 
                     key={i} 
-                    className="pl-6 basis-[85%] sm:basis-[55%] md:basis-[45%] lg:basis-[43%]"
+                    className="pl-4 basis-[88%] sm:basis-[55%] md:basis-[48%] lg:basis-[47%]"
                   >
-                    {/* FIXED: Hapus hover:y-[-10] dan hover:shadow */}
-                    <div className="relative h-[520px] w-full rounded-[2.5rem] overflow-hidden border-2 border-black bg-white transition-all duration-300">
+                    <div className="relative h-[460px] w-full rounded-[16px] overflow-hidden border-2 border-black bg-white shadow-[4px_4px_0px_0px_#000]">
                       
-                      {/* Image - Solid Border Bottom (Tanpa Zoom) */}
-                      <div className="relative h-[45%] w-full overflow-hidden border-b-2 border-black">
-                        {/* FIXED: Hapus group-hover:scale-110 */}
+                      <div className="relative h-[40%] w-full overflow-hidden border-b-2 border-black bg-zinc-100">
                         <img 
                           src={feature.imgUrl} 
                           alt={feature.title}
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-cover  transition-all duration-300"
                         />
-                        {/* FIXED: Hapus icon ArrowUpRight yang muncul pas hover */}
                       </div>
 
-                      {/* Content */}
-                      <div className="relative h-[55%] p-8 flex flex-col justify-between">
+                      <div className="relative h-[60%] p-6 flex flex-col justify-between">
                         <div>
-                          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">
+                          <span className="inline-block text-[10px] font-black uppercase tracking-wider text-black bg-[#6be1d9] border border-black px-2 py-0.5 rounded-[4px]">
                             {feature.category}
                           </span>
-                          <h3 className="text-2xl font-black mt-3 leading-none tracking-tighter uppercase">
+                          <h3 className="text-xl font-black mt-3 leading-tight tracking-tight uppercase text-black">
                             {feature.title}
                           </h3>
                         </div>
                         
-                        <p className="text-sm font-bold text-gray-500 leading-snug line-clamp-4">
+                        <p className="text-xs md:text-sm font-bold text-black/70 leading-normal line-clamp-4">
                           {feature.desc}
                         </p>
 
-                        {/* FIXED: Hapus line divider yang berubah warna */}
-                        <div className="w-full h-[1px] bg-black/10" />
+                        <div className="w-full h-[2px] bg-black" />
                       </div>
                     </div>
                   </CarouselItem>
                 ))}
               </CarouselContent>
               
-              <div className="flex items-center gap-4 mt-8 justify-end">
-                <CarouselPrevious className="static translate-y-0 translate-x-0 h-14 w-14 border-2 border-black bg-white text-black hover:bg-black hover:text-white transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none" />
-                <CarouselNext className="static translate-y-0 translate-x-0 h-14 w-14 border-2 border-black bg-white text-black hover:bg-black hover:text-white transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none" />
+              <div className="flex items-center gap-3 mt-6 justify-end">
+                <CarouselPrevious className="static translate-y-0 translate-x-0 h-11 w-11 border-2 border-black bg-white text-black hover:bg-[#6be1d9] hover:text-black transition-all rounded-[15px] shadow-[3px_3px_0px_0px_#000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none" />
+                <CarouselNext className="static translate-y-0 translate-x-0 h-11 w-11 border-2 border-black bg-white text-black hover:bg-[#6be1d9] hover:text-black transition-all rounded-[15px] shadow-[3px_3px_0px_0px_#000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none" />
               </div>
             </Carousel>
           </div>

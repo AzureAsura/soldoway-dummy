@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Minus } from "lucide-react";
@@ -18,44 +20,51 @@ const FAQ = () => {
   ];
 
   return (
-    <section className="px-6 py-24 md:py-32 max-w-7xl mx-auto">
-      <div className="flex flex-col lg:flex-row gap-12 lg:gap-24">
+    <section className="px-4 md:px-6 py-16 md:py-24 max-w-6xl mx-auto font-sans antialiased">
+      <div className="flex flex-col lg:flex-row gap-10 lg:gap-16">
         
-        {/* Kolom Kiri: Judul */}
-        <div className="lg:w-1/3 shrink-0">
+        {/* Kolom Kiri: Judul Utama Sticky */}
+        <div className="lg:w-1/3 shrink-0 lg:sticky lg:top-28 h-fit">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-80px" }}
             transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
           >
-            <h2 className="font-bold text-4xl md:text-5xl lg:text-[3.5rem] tracking-tight leading-[1.1] text-gray-900">
+            <div className="inline-block mb-3 px-2 py-0.5 bg-[#6be1d9] border border-black text-[10px] font-black uppercase tracking-widest rounded-[4px] shadow-[1.5px_1.5px_0px_0px_#000]">
+              HELP CENTER
+            </div>
+            <h2 className="font-black text-3xl md:text-5xl lg:text-5xl tracking-tight leading-[1.05] text-black uppercase">
               Frequently Asked<br className="hidden lg:block" /> Questions
             </h2>
           </motion.div>
         </div>
 
-        {/* Kolom Kanan: List FAQ */}
-        <div className="lg:w-2/3 flex flex-col space-y-2">
+        {/* Kolom Kanan: List FAQ Stacked Border */}
+        <div className="lg:w-2/3 flex flex-col space-y-4">
           {faqs.map((faq, i) => {
             const isOpen = openIndex === i;
 
             return (
               <div 
                 key={i}
-                className={`rounded-[1.5rem] transition-colors duration-300 ${
-                  isOpen ? "bg-[#F7F7F8]" : "bg-transparent hover:bg-gray-50/50"
+                /* Mengubah dari background tipis melayang ke sistem box panel bertumpuk */
+                className={`rounded-[12px] border-2 border-black transition-all duration-150 ${
+                  isOpen 
+                    ? "bg-[#6be1d9] shadow-[4px_4px_0px_0px_#000] translate-x-[-1px] translate-y-[-1px]" 
+                    : "bg-white hover:bg-[#6be1d9]/5 shadow-[3px_3px_0px_0px_#000] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[4px_4px_0px_0px_#000]"
                 }`}
               >
                 <button
                   onClick={() => toggleFAQ(i)}
-                  className="w-full flex items-center justify-between gap-6 p-6 md:p-8 text-left focus:outline-none"
+                  className="w-full flex items-center justify-between gap-6 p-5 md:p-6 text-left focus:outline-none"
                 >
-                  <span className="font-semibold text-gray-900 text-lg md:text-xl lg:text-2xl tracking-tight">
+                  <span className="font-black text-black text-base md:text-lg lg:text-xl uppercase tracking-wide leading-tight">
                     {faq.q}
                   </span>
-                  <span className="shrink-0 text-gray-400">
-                    {isOpen ? <Minus className="w-6 h-6 md:w-7 md:h-7" /> : <Plus className="w-6 h-6 md:w-7 md:h-7" />}
+                  {/* Indikator tombol plus/minus brutal dengan frame border tipis */}
+                  <span className="shrink-0 p-1 bg-white border-2 border-black rounded-[6px] text-black shadow-[1.5px_1.5px_0px_0px_#000]">
+                    {isOpen ? <Minus className="w-4 h-4 stroke-[3]" /> : <Plus className="w-4 h-4 stroke-[3]" />}
                   </span>
                 </button>
 
@@ -65,10 +74,10 @@ const FAQ = () => {
                       initial={{ height: 0, opacity: 0 }}
                       animate={{ height: "auto", opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.3, ease: "easeInOut" }}
-                      className="overflow-hidden"
+                      transition={{ duration: 0.25, ease: "easeInOut" }}
+                      className="overflow-hidden border-t-2 border-black bg-white rounded-b-[10px]"
                     >
-                      <div className="px-6 md:px-8 pb-8 text-gray-600 leading-relaxed md:leading-[1.8] text-base md:text-lg">
+                      <div className="p-5 md:p-6 text-black/80 font-bold text-xs md:text-sm leading-relaxed md:leading-[1.6]">
                         {faq.a}
                       </div>
                     </motion.div>

@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react"; // Tambahin ini biar gak ReferenceError
+import React from "react";
 import { motion } from "framer-motion";
 import { 
   Zap, 
@@ -15,88 +15,88 @@ const techStack = [
   { 
     name: "Solana", 
     desc: "Lightning fast, low cost transactions powering instant on-chain payouts.",
-    icon: Zap, // Kirim komponennya aja, jangan JSX-nya
-    color: "#22c55e", 
-    bgColor: "bg-green-50"
+    icon: Zap,
+    bgColor: "bg-[#6be1d9]" // Solid cyan aksen utama
   },
   { 
     name: "Anchor Framework", 
     desc: "Secure and audited smart contract escrow for trustless fund management.",
     icon: ShieldCheck, 
-    color: "#3b82f6", 
-    bgColor: "bg-blue-50"
+    bgColor: "bg-white"
   },
   { 
     name: "Privy", 
     desc: "Seamless gasless wallet authentication — no crypto knowledge required.",
     icon: UserCircle, 
-    color: "#a855f7", 
-    bgColor: "bg-purple-50"
+    bgColor: "bg-white"
   },
   { 
     name: "Cal.com", 
     desc: "Native meeting scheduling integration for real-time payout triggers.",
     icon: Calendar, 
-    color: "#f97316", 
-    bgColor: "bg-orange-50"
+    bgColor: "bg-white"
   },
   { 
     name: "Kamino", 
     desc: "Idle fund yield generation via Solana's premier DeFi liquidity vaults.",
     icon: TrendingUp, 
-    color: "#ec4899", 
-    bgColor: "bg-pink-50"
+    bgColor: "bg-white"
   },
   { 
     name: "Next.js", 
     desc: "High-performance React application framework for a fast, reliable UI.",
     icon: Cpu, 
-    color: "#0ea5e9", 
-    bgColor: "bg-sky-50"
+    bgColor: "bg-white"
   },
 ];
 
 const Core = () => {
   return (
-    <section className="px-6 py-24 md:py-32 bg-white">
-      <div className="max-w-7xl mx-auto">
+    <section className=" py-16 md:py-24 bg-white border-b-2 border-black font-sans antialiased">
+      <div className="max-w-6xl px-4 md:px-6 mx-auto">
         
+        {/* Header Section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="mb-16"
+          className="mb-12 md:mb-16"
         >
-          <h2 className="font-bold text-4xl md:text-5xl tracking-tight mb-4 text-black">
+          <div className="inline-block mb-3 px-2 py-0.5 bg-black text-[#6be1d9] text-[10px] font-black uppercase tracking-widest rounded-[4px]">
+            PRODUCTION READYSTARK
+          </div>
+          <h2 className="font-black text-3xl md:text-5xl tracking-tight mb-3 uppercase text-black">
             Core Infrastructure
           </h2>
-          <p className="text-gray-500 text-lg md:text-xl max-w-xl">
+          <p className="text-black/70 text-xs md:text-sm font-bold max-w-xl leading-normal">
             Built on cutting-edge Web3 and SaaS technologies.
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* High-Density Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
           {techStack.map((tech, i) => {
-            const IconComponent = tech.icon; // Ambil komponennya
+            const IconComponent = tech.icon;
             return (
               <motion.div
                 key={tech.name}
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ delay: i * 0.1, duration: 0.5 }}
-                className="group p-8 rounded-[2.5rem] bg-[#F8F9FA] border border-gray-100 hover:border-black/10 hover:bg-white hover:shadow-xl hover:shadow-black/5 transition-all duration-300"
+                transition={{ delay: i * 0.05, duration: 0.4 }}
+                /* Card Transform: Kotak kaku tebal, hilangkan shadow soft, pakai shadow hard */
+                className="group p-6 rounded-[12px] bg-white border-2 border-black shadow-[4px_4px_0px_0px_#000] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[2px_2px_0px_0px_#000] transition-all duration-150"
               >
-                <div className={`w-12 h-12 ${tech.bgColor} rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300`}>
-                  {/* Panggil sebagai komponen biasa */}
-                  <IconComponent size={24} color={tech.color} strokeWidth={2.5} />
+                {/* Icon Container Frame */}
+                <div className={`w-10 h-10 ${tech.bgColor} border-2 border-black rounded-[15px] flex items-center justify-center mb-5 shadow-[2px_2px_0px_0px_#000] group-hover:bg-[#6be1d9] transition-colors duration-200`}>
+                  <IconComponent size={18} className="text-black stroke-[2.5]" />
                 </div>
 
-                <div className="space-y-3">
-                  <h3 className="text-xl font-bold text-black tracking-tight">
+                <div className="space-y-2">
+                  <h3 className="text-lg font-black text-black uppercase tracking-wider">
                     {tech.name}
                   </h3>
-                  <p className="text-gray-500 leading-relaxed font-medium">
+                  <p className="text-xs md:text-sm text-black/70 leading-relaxed font-bold">
                     {tech.desc}
                   </p>
                 </div>

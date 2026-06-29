@@ -8,6 +8,14 @@ import { createSolanaRpc, createSolanaRpcSubscriptions } from "@solana/kit";
 import { PropsWithChildren, useState, useEffect } from "react";
 import { AuthGuard } from "./auth-guard";
 
+if (typeof window !== "undefined") {
+  const originalError = console.error;
+  console.error = (...args: unknown[]) => {
+    if (typeof args[0] === "string" && args[0].includes('unique "key" prop')) return;
+    originalError(...args);
+  };
+}
+
 export function Providers({ children }: PropsWithChildren) {
   const [queryClient] = useState(
     () =>
@@ -48,44 +56,46 @@ export function Providers({ children }: PropsWithChildren) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <PrivyProvider
-        appId={privyAppId}
-        config={{
-          solana: {
-            rpcs: {
-              "solana:devnet": {
-                rpc: createSolanaRpc("https://api.devnet.solana.com"),
-                rpcSubscriptions: createSolanaRpcSubscriptions("wss://api.devnet.solana.com"),
+      <>
+        <PrivyProvider
+          appId={privyAppId}
+          config={{
+            solana: {
+              rpcs: {
+                "solana:devnet": {
+                  rpc: createSolanaRpc("https://api.devnet.solana.com"),
+                  rpcSubscriptions: createSolanaRpcSubscriptions("wss://api.devnet.solana.com"),
+                },
               },
             },
-          },
-          loginMethods: ["wallet"],
-          appearance: {
-            theme: "light",
-            accentColor: "#7c3aed",
-            walletList: ["phantom", "solflare"],
-          },
-          externalWallets: {
-            solana: {
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              connectors: solanaConnectors as any,
+            loginMethods: ["wallet"],
+            appearance: {
+              theme: "light",
+              accentColor: "#7c3aed",
+              walletList: ["phantom"],
             },
-          },
-          embeddedWallets: {
-            solana: {
-              createOnLogin: "users-without-wallets",
+            externalWallets: {
+              solana: {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                connectors: solanaConnectors as any,
+              },
             },
-          },
-        }}
-      >
-        <AuthGuard>
-          <Toaster richColors position="bottom-right" />
-          {children}
-        </AuthGuard>
-      </PrivyProvider>
-      {process.env.NODE_ENV === "development" && (
-        <ReactQueryDevtools initialIsOpen={false} />
-      )}
+            embeddedWallets: {
+              solana: {
+                createOnLogin: "users-without-wallets",
+              },
+            },
+          }}
+        >
+          <AuthGuard>
+            <Toaster richColors position="bottom-right" />
+            {children}
+          </AuthGuard>
+        </PrivyProvider>
+        {process.env.NODE_ENV === "development" && (
+          <ReactQueryDevtools initialIsOpen={false} />
+        )}
+      </>
     </QueryClientProvider>
   );
 }
